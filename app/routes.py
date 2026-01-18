@@ -1,15 +1,29 @@
 from app import app # import the app VARIABLE from the app MODULE/FILE
+from app.forms import SearchForm
+from app import db
+from flask import flash, redirect, url_for # Important for user navigation
+from flask import render_template # import the render_template() function to use the template from the index.html file in the templates folder
+from flask import request # Flask provides a request variable that contains all the information that the client sent with the request (send user to the page they originally requested after they log in)
+from urllib.parse import urlsplit # A function that parses a URL and has a .netloc component that reveals if the url is a relative path within the app or includes an outside domain name, which is dangerous and should be ignored
 
 
-
-
-
-
-
-
-
-
-@app.route('/') # these decorators make the function below a "view function."
-@app.route('/index') # When a browser requests either of these 2 URLs Flask will return the result of this function as a response (just a print statement)
+@app.route('/', methods=['GET', 'POST']) # these decorators make the function below a "view function."
+@app.route('/index', methods=['GET', 'POST']) # When a browser requests either of these 2 URLs Flask will return the result of this function as a response (just a print statement)
 def index(): # this is a view function mapped to one or more route URLs so Flask knows what logic to execute when a client requests a given URL
-    return "Hello, World!"
+    form = SearchForm()
+    if form.validate_on_submit(): 
+        # call database for user search 
+        return redirect(url_for('index')) # refresh application to show changes (we ain't using websockets)
+    
+    return render_template('index.html', title='TBA', form=form) # Not sure what deliverable the main page should present so title is 'TBA' for now
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% if title %}
+    <title>{{ title }} - Fantasy Basketball</title>
+    {% else %}
+    <title>Fantasy Basketball</title>
+    {% endif %}
+  </head>
+  <body>
+    <nav>
+        Navigation bar content here
+    </nav>
+
+    <div>
+      {% block content %}{% endblock %}
+    </div>
+
+
+    {{ moment.include_moment() }} <!-- for time conversions -->
+  </body>
+</html> 
