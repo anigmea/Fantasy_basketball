@@ -6,4 +6,4 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'TBA'
-    DATABASE_URI = os.environ.get('DATABASE_URL', '') or 'TBA'
+    FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS") or 'TBA'

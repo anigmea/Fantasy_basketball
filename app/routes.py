@@ -15,7 +15,22 @@ def index(): # this is a view function mapped to one or more route URLs so Flask
         # call database for user search 
         return redirect(url_for('index')) # refresh application to show changes (we ain't using websockets)
     
-    return render_template('index.html', title='TBA', form=form) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    # Example Firestore query
+    # results = (
+    #     db.collection("users")
+    #         .where("username", "==", query)
+    #         .stream()
+    #     )
+    # users = [doc.to_dict() for doc in results]
+
+    # Get players
+
+    results = (
+        db.collection("Players").stream()
+    )
+    players = [doc.to_dict() for doc in results] # [{'name': 'LeBron James'}, {'name': 'Michael Jordan'}]
+
+    return render_template('index.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
 
 
 

@@ -2,5 +2,10 @@
 
 {% block content %}
     <h1>Put content unique to the deliverable this page is supposed to show here in the form of html</h1>
+
+    {% for player in players %}
+    <h2>{{player.name}}</h2>
+    {% endfor %}
+
 {% endblock %}
 
