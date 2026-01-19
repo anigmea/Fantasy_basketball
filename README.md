@@ -4,7 +4,7 @@ To Host Application Locally:
 2. venv/Scripts/Activate.ps1 (in powershell)
 3. pip install -r requirements.txt
 4. (create a file named .flaskenv in the root directory with FLASK_APP=fantasy.py inside)
-5. (after being added to the firestore database, go to project settings -> service accounts -> click generate new private key, and copy absolute path of the json file)
+5. (after being added to the firestore database, go to project settings -> service accounts -> click generate new private key, and copy absolute path of the json file. Do not put it in the same directory as this repo)
 6. (create a .env file in the root directory of this repo with FIREBASE_CREDENTIALS="<path to your json file>" inside)
 7. flask run (in powershell with venv activated)
 
