@@ -7,3 +7,7 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'TBA'
     FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS") or 'TBA'
+    SWID = os.environ.get("SWID") or 'TBA'
+    ESPN_S2 = os.environ.get("ESPN_S2") or 'TBA'
+    LEAGUE_ID = os.environ.get("LEAGUE_ID") or 'TBA'
+
