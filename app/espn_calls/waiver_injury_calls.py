@@ -8,3 +8,8 @@ def get_injured_players(league, team_id):
 def get_free_agents(league, week=None, position=None):
     return league.free_agents(week=week, position=position)
 
+__all__ = [
+    "get_roster",
+    "get_injured_players",
+    "get_free_agents"
+]

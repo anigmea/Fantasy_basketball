@@ -20,3 +20,8 @@ def get_boom_bust_players(league):
                 "projected_avg_points": p.projected_avg_points,
             })
     return results
+
+__all__ = [
+    "compute_boom_score",
+    "get_boom_bust_players"
+]
