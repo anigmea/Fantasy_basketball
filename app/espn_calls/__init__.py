@@ -9,7 +9,7 @@ __all__ = [
     "get_boom_bust_players",
     "get_roster", 
     "get_injured_players",
-    "get_free_agents"
+    "get_free_agents",
     "get_all_players",
     "generate_player_rankings",
     "get_team_schedule",
