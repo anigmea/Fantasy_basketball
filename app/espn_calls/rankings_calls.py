@@ -44,4 +44,4 @@ def generate_player_rankings(league, by: str = "avg_points", position: Optional[
     return results
 
 
-__all__ = ["get_all_players", "generate_player_rankings"]
+__all__ = ["get_all_players", "_safe_get", "generate_player_rankings"]

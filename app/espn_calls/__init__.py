@@ -11,9 +11,11 @@ __all__ = [
     "get_injured_players",
     "get_free_agents",
     "get_all_players",
+    "_safe_get",
     "generate_player_rankings",
     "get_team_schedule",
     "get_games_left_in_week",
     "compute_player_trade_value",
+    "_get_player_by_id",
     "evaluate_trade",
 ]
