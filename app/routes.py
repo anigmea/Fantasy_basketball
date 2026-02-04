@@ -1,121 +1,97 @@
-from app import app # import the app VARIABLE from the app MODULE/FILE
-from app.forms import SearchForm
-from app import db
-from flask import flash, redirect, url_for # Important for user navigation
-from flask import render_template # import the render_template() function to use the template from the index.html file in the templates folder
-from flask import request # Flask provides a request variable that contains all the information that the client sent with the request (send user to the page they originally requested after they log in)
-from urllib.parse import urlsplit # A function that parses a URL and has a .netloc component that reveals if the url is a relative path within the app or includes an outside domain name, which is dangerous and should be ignored
+from app import app, db
+from flask import jsonify, request
+from app.espn_calls.boom_bust_calls import compute_boom_score
+from app.espn_calls.rankings_calls import generate_player_rankings
+from app.espn_calls.waiver_injury_calls import get_roster, get_free_agents, get_injured_players
+from app.espn_calls.schedule_calls import get_team_schedule
+from app.espn_calls.trade_calls import evaluate_trade
 
+SWID = app.config["SWID"]
+ESPN_S2 = app.config["ESPN_S2"]
+LEAGUE_ID = app.config["LEAGUE_ID"]
+
+# NOTE: Functions from espn_calls still need to be edited to accept the correct parameters based on updated pipelines/espn_calls
 
 # ROUTE FOR PLAYER RANKINGS
-@app.route('/', methods=['GET', 'POST']) # these decorators make the function below a "view function."
-@app.route('/index', methods=['GET', 'POST']) # When a browser requests either of these 2 URLs Flask will return the result of this function as a response (just a print statement)
-def index(): # this is a view function mapped to one or more route URLs so Flask knows what logic to execute when a client requests a given URL
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('index')) # refresh application to show changes (we ain't using websockets) (this will also have to take parameter)
-    
-    # Example Firestore query
-    # results = (
-    #     db.collection("users")
-    #         .where("username", "==", query)
-    #         .stream()
-    #     )
-    # users = [doc.to_dict() for doc in results]
+@app.route('/api/players', methods=['GET'])
+def get_players():
+    # get all players from Firebase
+    try:
+        results = db.collection("Players").stream()
+        players = [doc.to_dict() for doc in results]
+        return jsonify({"success": True, "data": players}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    # Get players
-
-    results = (
-        db.collection("Players").stream()
-    )
-    players = [doc.to_dict() for doc in results] # [{'name': 'LeBron James'}, {'name': 'Michael Jordan'}]
-
-    return render_template('index.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
+@app.route('/api/rankings', methods=['GET'])
+def get_rankings():
+    # generate player rankings
+    try:
+        rankings = generate_player_rankings(ESPN_S2, SWID, LEAGUE_ID)
+        return jsonify({"success": True, "data": rankings}), 200 # 200 - success
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500 # 500 = server/code error
 
 # ROUTE FOR PLAYER WAIVER/INJURY REPLACEMENT
-@app.route('/replacements', methods=['GET', 'POST'])
-def replacements():
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('replacements')) 
+@app.route('/api/replacements', methods=['POST'])
+def replacements_api():
+    # get replacement players for injured team members
+    try:
+        data = request.json
+        team = data.get("team", [])
+        
+        if not team:
+            return jsonify({"success": False, "error": "No team provided"}), 400 # 400 = bad request
+        
+        replacements = get_injured_players(team)
+        return jsonify({"success": True, "data": replacements}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    replacements = []
-
-    return render_template('replacements.html', title='TBA', form=form, replacements=replacements) # Not sure what deliverable the main page should present so title is 'TBA' for now
-
-# ROUTE FOR Boom/bust
-@app.route('/boombust', methods=['GET', 'POST'])
+# ROUTE FOR Boom/Bust
+@app.route('/api/boombust', methods=['POST'])
 def boombust():
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('boombust')) 
-
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    players = []
-
-    return render_template('boombust.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    # analyze team boom/bust scores
+    try:
+        data = request.json
+        team = data.get("team", [])
+        
+        if not team:
+            return jsonify({"success": False, "error": "No team provided"}), 400
+        
+        results = compute_boom_score(ESPN_S2, LEAGUE_ID, team)
+        return jsonify({"success": True, "data": results}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ROUTE FOR schedule tracker
-@app.route('/schedule', methods=['GET', 'POST'])
-def schedule():
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('schedule')) 
-
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    teams = []
-
-    return render_template('schedule.html', title='TBA', form=form, teams=teams) # Not sure what deliverable the main page should present so title is 'TBA' for now
+@app.route('/api/schedule', methods=['GET'])
+def schedule_api():
+    """Get team schedules"""
+    try:
+        schedule = get_team_schedule(ESPN_S2, LEAGUE_ID)
+        return jsonify({"success": True, "data": schedule}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ROUTE FOR trade analyzer
-@app.route('/trade', methods=['GET', 'POST'])
-def trade():
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('trade')) 
+@app.route('/api/trade', methods=['POST'])
+def trade_api():
+    """Analyze a proposed trade"""
+    try:
+        data = request.json
+        trade_info = data.get("trade", {})
+        
+        if not trade_info:
+            return jsonify({"success": False, "error": "No trade info provided"}), 400
+        
+        analysis = evaluate_trade(trade_info)
+        return jsonify({"success": True, "data": analysis}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    players = []
-
-    return render_template('trade.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Health check endpoint
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint"""
+    return jsonify({"status": "healthy", "message": "Backend is running"}), 200
