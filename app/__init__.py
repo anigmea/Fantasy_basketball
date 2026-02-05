@@ -21,8 +21,8 @@ cred = credentials.Certificate(app.config["FIREBASE_CREDENTIALS"])
 firebase_admin.initialize_app(cred)
 db = firestore.client() # create a variable to reference our firebase database, with the url coming from app.config
 
-def save_analysis(user_id, analysis):
-    db.collection("users").document(user_id).collection("analysis").add(analysis)
+# def save_analysis(user_id, analysis):
+#     db.collection("users").document(user_id).collection("analysis").add(analysis)
 
 moment = Moment(app) # for date and time rendering (we need to convert times accurately for users in different areas) (add {{ moment.include_moment() }} to base.html at bottom of <body></body> element)
 

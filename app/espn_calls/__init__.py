@@ -1,4 +1,5 @@
 from .boom_bust_calls import * 
+from .trade_calls import _get_player_by_id
 from .waiver_injury_calls import * 
 from .rankings_calls import *
 from .schedule_calls import *
@@ -14,6 +15,7 @@ __all__ = [
     "generate_player_rankings",
     "get_team_schedule",
     "get_games_left_in_week",
+    _get_player_by_id,
     "compute_player_trade_value",
     "evaluate_trade",
 ]
