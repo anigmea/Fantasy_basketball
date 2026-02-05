@@ -4,21 +4,123 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% if title %}
-    <title>{{ title }} - Fantasy Basketball</title>
+    <title>Fantasy Basketball - {{ title }}</title>
     {% else %}
     <title>Fantasy Basketball</title>
     {% endif %}
+
+     <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #121212;
+        color: #eaeaea;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      a {
+        color: #7aa2ff;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      nav {
+        display: flex;
+        justify-content: center;   /* center links */
+        align-items: center;
+        gap: 2rem;
+        padding: 1rem 2rem;
+        background-color: #1e1e1e;
+        border-bottom: 1px solid #2a2a2a;
+      }
+      nav a {
+        font-weight: 500;
+      }
+      main {
+        flex: 1;
+        padding: 2rem;
+        padding-bottom: 3rem; /* space for fixed footer */
+      }
+
+      h1 {
+        text-align: center;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
+        max-width: 1200px;
+      }
+      .tables {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+      .tables > div {
+        padding: 0 2rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      thead {
+        background-color: #222;
+      }
+      th, td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+      }
+      th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #aaa;
+      }
+      tr:nth-child(even) {
+        background-color: #181818;
+      }
+      tr:hover {
+        background-color: #262626;
+      }
+      footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+
+        text-align: center;
+        padding: 0.75rem;
+        background-color: #1e1e1e;
+        border-top: 1px solid #2a2a2a;
+        font-size: 0.85rem;
+        color: #aaa;
+      }
+      @media (max-width: 900px) {
+        .tables {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
+
   <body>
     <nav>
-        Navigation bar content here
+        <a href="{{url_for('index')}}">Players</a>
+        <a href="{{url_for('replacements')}}">Replacements</a>
+        <a href="{{url_for('boombust')}}">Boom/Bust</a>
+        <a href="{{url_for('schedule')}}">Schedule</a>
+        <a href="{{url_for('trade')}}">Trade</a>
     </nav>
 
     <div>
       {% block content %}{% endblock %}
     </div>
 
+    <footer>Data sourced from <a href="https://github.com/cwendt94/espn-api">espn</a></footer>
 
     {{ moment.include_moment() }} <!-- for time conversions -->
   </body>
+
 </html> 

@@ -24,14 +24,20 @@ def index(): # this is a view function mapped to one or more route URLs so Flask
     #     )
     # users = [doc.to_dict() for doc in results]
 
-    # Get players
-
-    results = (
-        db.collection("Players").stream()
+    # Get team players
+    team_players = (
+        db.collection("team_players").limit(10).stream() # only get 10 to avoid high reads during development
     )
-    players = [doc.to_dict() for doc in results] # [{'name': 'LeBron James'}, {'name': 'Michael Jordan'}]
 
-    return render_template('index.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    # Get free agents
+    free_agents = (
+        db.collection("free_agents").limit(10).stream() 
+    )
+
+    team_players = [doc.to_dict() for doc in team_players] # [{'name': 'LeBron James'}, {'name': 'Michael Jordan'}]
+    free_agents = [doc.to_dict() for doc in free_agents]
+
+    return render_template('index.html', title='Player Rankings', form=form, team_players=team_players, free_agents=free_agents)
 
 # ROUTE FOR PLAYER WAIVER/INJURY REPLACEMENT
 @app.route('/replacements', methods=['GET', 'POST'])
@@ -47,7 +53,7 @@ def replacements():
     # players = [doc.to_dict() for doc in results] 
     replacements = []
 
-    return render_template('replacements.html', title='TBA', form=form, replacements=replacements) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    return render_template('replacements.html', title='Replacements', form=form, replacements=replacements) 
 
 # ROUTE FOR Boom/bust
 @app.route('/boombust', methods=['GET', 'POST'])
@@ -63,7 +69,7 @@ def boombust():
     # players = [doc.to_dict() for doc in results] 
     players = []
 
-    return render_template('boombust.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    return render_template('boombust.html', title='Boom/Bust', form=form, players=players)
 
 # ROUTE FOR schedule tracker
 @app.route('/schedule', methods=['GET', 'POST'])
@@ -79,7 +85,7 @@ def schedule():
     # players = [doc.to_dict() for doc in results] 
     teams = []
 
-    return render_template('schedule.html', title='TBA', form=form, teams=teams) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    return render_template('schedule.html', title='Schedule', form=form, teams=teams)
 
 # ROUTE FOR trade analyzer
 @app.route('/trade', methods=['GET', 'POST'])
@@ -95,7 +101,7 @@ def trade():
     # players = [doc.to_dict() for doc in results] 
     players = []
 
-    return render_template('trade.html', title='TBA', form=form, players=players) # Not sure what deliverable the main page should present so title is 'TBA' for now
+    return render_template('trade.html', title='Trades', form=form, players=players)
 
 
 

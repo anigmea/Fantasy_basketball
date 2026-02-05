@@ -1,11 +1,49 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Put content unique to the deliverable this page is supposed to show here in the form of html</h1>
 
-    {% for player in players %}
-    <h2>{{player.name}}</h2>
-    {% endfor %}
+<h1>Player Rankings</h1>
+
+<div class="tables">
+
+  <!-- TEAM PLAYERS -->
+  <div>
+    <h2>Team Players</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for player in team_players %}
+          <tr>
+            <td>{{ player.name }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FREE AGENTS -->
+  <div>
+    <h2>Free Agents</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for player in free_agents %}
+          <tr>
+            <td>{{ player.name }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
 
 {% endblock %}
-
