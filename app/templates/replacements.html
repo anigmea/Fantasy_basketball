@@ -1,11 +1,319 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Put content unique to the deliverable this page is supposed to show here in the form of html</h1>
 
-    {% for replacement in replacements %}
-    <h2>{{ replacement }}</h2>
-    {% endfor %}
+<h1>Injury Replacements</h1>
+
+<div class="filter-section">
+  <label for="week-select">Week:</label>
+  <select id="week-select" name="week">
+    <option value="1">Week 1</option>
+    <option value="2">Week 2</option>
+    <option value="3">Week 3</option>
+    <option value="4">Week 4</option>
+    <option value="5" selected>Week 5</option>
+    <option value="6">Week 6</option>
+    <option value="7">Week 7</option>
+    <option value="8">Week 8</option>
+    <option value="9">Week 9</option>
+    <option value="10">Week 10</option>
+  </select>
+  <button id="refresh-btn">Refresh Replacements</button>
+</div>
+
+<div class="tables">
+
+  <!-- INJURED PLAYERS -->
+  <div class="injured-section">
+    <h2>Injured Players</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Position</th>
+          <th>Status</th>
+          <th>Team</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="injured-row" data-player-id="1">
+          <td>Christian McCaffrey</td>
+          <td>RB</td>
+          <td><span class="injury-status status-out">OUT</span></td>
+          <td>SF</td>
+        </tr>
+        <tr class="injured-row" data-player-id="2">
+          <td>Cooper Kupp</td>
+          <td>WR</td>
+          <td><span class="injury-status status-questionable">QUESTIONABLE</span></td>
+          <td>LAR</td>
+        </tr>
+        <tr class="injured-row" data-player-id="3">
+          <td>Mark Andrews</td>
+          <td>TE</td>
+          <td><span class="injury-status status-doubtful">DOUBTFUL</span></td>
+          <td>BAL</td>
+        </tr>
+        <tr class="injured-row" data-player-id="4">
+          <td>Joe Burrow</td>
+          <td>QB</td>
+          <td><span class="injury-status status-questionable">QUESTIONABLE</span></td>
+          <td>CIN</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RECOMMENDED REPLACEMENTS -->
+  <div class="replacements-section">
+    <h2>Recommended Replacements</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Position</th>
+          <th>Team</th>
+          <th>Proj. Pts</th>
+          <th>Availability</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="replacement-row" data-injured-id="1">
+          <td>Jordan Mason</td>
+          <td>RB</td>
+          <td>SF</td>
+          <td>14.2</td>
+          <td><span class="availability-badge availability-fa">Free Agent</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="101">Claim</button>
+          </td>
+        </tr>
+        <tr class="replacement-row" data-injured-id="1">
+          <td>Zach Charbonnet</td>
+          <td>RB</td>
+          <td>SEA</td>
+          <td>12.5</td>
+          <td><span class="availability-badge availability-waiver">Waiver</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="102">Claim</button>
+          </td>
+        </tr>
+        <tr class="replacement-row" data-injured-id="2">
+          <td>Demarcus Robinson</td>
+          <td>WR</td>
+          <td>LAR</td>
+          <td>11.8</td>
+          <td><span class="availability-badge availability-fa">Free Agent</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="103">Claim</button>
+          </td>
+        </tr>
+        <tr class="replacement-row" data-injured-id="2">
+          <td>Josh Downs</td>
+          <td>WR</td>
+          <td>IND</td>
+          <td>10.3</td>
+          <td><span class="availability-badge availability-waiver">Waiver</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="104">Claim</button>
+          </td>
+        </tr>
+        <tr class="replacement-row" data-injured-id="3">
+          <td>Cade Otton</td>
+          <td>TE</td>
+          <td>TB</td>
+          <td>9.5</td>
+          <td><span class="availability-badge availability-fa">Free Agent</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="105">Claim</button>
+          </td>
+        </tr>
+        <tr class="replacement-row" data-injured-id="4">
+          <td>Baker Mayfield</td>
+          <td>QB</td>
+          <td>TB</td>
+          <td>18.7</td>
+          <td><span class="availability-badge availability-fa">Free Agent</span></td>
+          <td>
+            <button class="claim-btn" data-player-id="106">Claim</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<style>
+.filter-section {
+  max-width: 500px;
+  margin: 0 auto 2rem;
+  padding: 1.5rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  text-align: center;
+}
+
+.filter-section label {
+  font-weight: 600;
+  margin-right: 10px;
+  color: #eaeaea;
+}
+
+.filter-section select,
+.filter-section button {
+  padding: 8px 16px;
+  margin-left: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #262626;
+  color: #eaeaea;
+}
+
+.filter-section select {
+  cursor: pointer;
+}
+
+.filter-section select:hover {
+  border-color: #4a4a4a;
+}
+
+.filter-section button {
+  background: #7aa2ff;
+  color: #121212;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+.filter-section button:hover {
+  background: #5a8aef;
+}
+
+h2 {
+  margin-bottom: 1rem;
+  color: #eaeaea;
+  font-size: 1.3em;
+  text-align: center;
+}
+
+.injury-status {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-out {
+  background: #4a2020;
+  color: #ff6b6b;
+}
+
+.status-questionable {
+  background: #4a4020;
+  color: #ffd93d;
+}
+
+.status-doubtful {
+  background: #4a2020;
+  color: #ff9999;
+}
+
+.availability-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.availability-fa {
+  background: #1e4a2e;
+  color: #6bcf7f;
+}
+
+.availability-waiver {
+  background: #1e3a4a;
+  color: #6bb8cf;
+}
+
+.claim-btn {
+  padding: 6px 16px;
+  background: #6bcf7f;
+  color: #121212;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.claim-btn:hover {
+  background: #5abf6f;
+}
+
+.injured-row:hover,
+.replacement-row:hover {
+  background-color: #262626 !important;
+}
+</style>
+
+<script>
+// Refresh replacements when week changes
+document.getElementById('refresh-btn').addEventListener('click', function() {
+  const week = document.getElementById('week-select').value;
+  const teamId = 123; // This would come from your Flask backend
+  
+  console.log(`Fetching replacements for team ${teamId}, week ${week}`);
+  
+  // this would call the Flask endpoint:
+  // fetch(`/api/replacements?team_id=${teamId}&week=${week}`)
+  //   .then(response => response.json())
+  //   .then(data => {
+  //     // Update the page with new data
+  //     location.reload();
+  //   })
+  //   .catch(error => console.error('Error:', error));
+  
+  alert(`Refreshing data for Week ${week}`);
+});
+
+// handle button for claiming free agent (not sure if we can do this without login tho so maybe not)
+// document.querySelectorAll('.claim-btn').forEach(button => {
+//   button.addEventListener('click', function() {
+//     const playerId = this.dataset.playerId;
+//     console.log('Claiming player:', playerId);
+    
+//     // This would call your claim endpoint:
+//     // fetch(`/api/claim_player`, {
+//     //   method: 'POST',
+//     //   headers: { 'Content-Type': 'application/json' },
+//     //   body: JSON.stringify({ player_id: playerId })
+//     // })
+    
+//     alert(`Claiming player ID: ${playerId}`);
+//   });
+// });
+
+// highlight corresponding replacements when hovering over injured player
+document.querySelectorAll('.injured-row').forEach(row => {
+  row.addEventListener('mouseenter', function() {
+    const playerId = this.dataset.playerId;
+    document.querySelectorAll(`.replacement-row[data-injured-id="${playerId}"]`).forEach(r => {
+      r.style.backgroundColor = '#2a3a4a';
+    });
+  });
+  
+  row.addEventListener('mouseleave', function() {
+    document.querySelectorAll('.replacement-row').forEach(r => {
+      r.style.backgroundColor = '';
+    });
+  });
+});
+</script>
 
 {% endblock %}
-
