@@ -1,7 +1,6 @@
 # Basketball API
 from espn_api.basketball import League
 from app import app
-from app.espn_calls import *
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -62,19 +61,21 @@ teams_for_db = []
 players_for_db = []
 free_agents_for_db = []
 
+# firestore can't hold datetime values. Serialize stats and schedule
+def serialize(obj):
+    if isinstance(obj, dict):
+        return {k: serialize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [serialize(v) for v in obj]
+    if hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    return obj
+
 for team in teams: 
     for player in team.roster:
         players_for_db.append({'name': player.name, 'playerId': player.playerId, 'eligibleSlots':player.eligibleSlots, 'posRank':player.posRank,
                                'acquisitionType':player.acquisitionType, 'proTeam':player.proTeam, 'position':player.position, 'injuryStatus':player.injuryStatus,
-                               'injured':player.injured, 'stats': player.stats, 'schedule':player.schedule, 'lineupSlot':player.lineupSlot,
-                               'total_points':player.total_points, 'avg_points':player.avg_points, 'projected_total_points':player.projected_total_points,
-                               'projected_avg_points':player.projected_avg_points})
-        
-    # account for free agents (players not on team)
-    for player in league.free_agents():
-        free_agents_for_db.append({'name': player.name, 'playerId': player.playerId, 'eligibleSlots':player.eligibleSlots, 'posRank':player.posRank,
-                               'acquisitionType':player.acquisitionType, 'proTeam':player.proTeam, 'position':player.position, 'injuryStatus':player.injuryStatus,
-                               'injured':player.injured, 'stats': player.stats, 'schedule':player.schedule, 'lineupSlot':player.lineupSlot,
+                               'injured':player.injured, 'stats': serialize(player.stats), 'schedule':serialize(player.schedule), 'lineupSlot':player.lineupSlot,
                                'total_points':player.total_points, 'avg_points':player.avg_points, 'projected_total_points':player.projected_total_points,
                                'projected_avg_points':player.projected_avg_points})
 
@@ -88,40 +89,82 @@ for team in teams:
     #                      'logo_url':team.logo_url, 'roster':[player.playerId for player in team.roster],
     #                      'schedule':[{'home_team':matchup.home_team, 'home_final_score':matchup.home_final_score, 'away_team':matchup.away_team,
     #                                   'away_final_score':matchup.away_final_score, 'winner':matchup.winner} for matchup in team.schedule]})
+
+# account for free agents (players not on team)
+for player in league.free_agents():
+    free_agents_for_db.append({'name': player.name, 'playerId': player.playerId, 'eligibleSlots':player.eligibleSlots, 'posRank':player.posRank,
+                               'acquisitionType':player.acquisitionType, 'proTeam':player.proTeam, 'position':player.position, 'injuryStatus':player.injuryStatus,
+                               'injured':player.injured, 'stats': serialize(player.stats), 'schedule':serialize(player.schedule), 'lineupSlot':player.lineupSlot,
+                               'total_points':player.total_points, 'avg_points':player.avg_points, 'projected_total_points':player.projected_total_points,
+                               'projected_avg_points':player.projected_avg_points})
     
 # [team_dummy.team_id for team_dummy in team.schedule.Team if team_dummy.team_id != team.team_id]
-
-print(players_for_db[0], len(players_for_db), '\n')
-print(free_agents_for_db[0], len(free_agents_for_db), '\n')
-# print(teams_for_db[0], len(teams_for_db), '\n')
 
 db = firestore.client()
 
 # delete current player tables before pushing new data
 def delete_collection(collection_ref, batch_size=500):
-    docs = collection_ref.limit(batch_size).stream()
-    deleted = 0
-
-    for doc in docs:
-        doc.reference.delete()
-        deleted += 1
-
-    if deleted >= batch_size:
-        delete_collection(collection_ref, batch_size)
+    while True:
+        docs = list(collection_ref.limit(batch_size).stream())
+        if not docs:
+            break
+        for doc in docs:
+            doc.reference.delete()
 
 delete_collection(db.collection("team_players"))
 delete_collection(db.collection("free_agents"))
 
+# TEAM PLAYERS
+batch = db.batch()
+count = 0
+
 for player in players_for_db:
-    doc_ref = db.collection('team_players').document()
-    doc_ref.set(player)
+    ref = db.collection("team_players").document()
+    batch.set(ref, player)
+    count += 1
+
+    if count == 25:
+        batch.commit()
+        batch = db.batch()
+        count = 0
+
+if count > 0:
+    batch.commit()
+
+# FREE AGENTS
+batch = db.batch()
+count = 0
 
 for player in free_agents_for_db:
-    doc_ref = db.collection('free_agents').document()
-    doc_ref.set(player)
+    ref = db.collection("free_agents").document()
+    batch.set(ref, player)
+    count += 1
+
+    if count == 25:
+        batch.commit()
+        batch = db.batch()
+        count = 0
+
+if count > 0:
+    batch.commit()
+
+try:
+    team_players_count = sum(1 for _ in db.collection("team_players").stream())
+except Exception:
+    team_players_count = "unknown"
+
+try:
+    free_agents_count = sum(1 for _ in db.collection("free_agents").stream())
+except Exception:
+    free_agents_count = "unknown"
 
 # DO NOT EXIT VSCODE OR CANCEL THE SCRIPT BEFORE YOU SEE THE MESSAGE
-print('\n' + 'scraping complete')
+print('\n' + 'scraping complete', '\n')
+print('Team player array length: ', len(players_for_db), '\n')
+print('Free agent array length: ', len(free_agents_for_db), '\n')
+print('Team players added: ', team_players_count, '\n')
+print('Free agents added: ', free_agents_count, '\n')
+# print(teams_for_db[0], len(teams_for_db), '\n')
 
 # for team in teams_for_db:
 #     doc_ref = db.collection('teams').document()

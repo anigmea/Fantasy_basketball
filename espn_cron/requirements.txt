@@ -1,0 +1,3 @@
+espn-api
+firebase-admin
+google-cloud-firestore
