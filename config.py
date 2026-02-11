@@ -10,4 +10,3 @@ class Config:
     SWID = os.environ.get("SWID") or 'TBA'
     ESPN_S2 = os.environ.get("ESPN_S2") or 'TBA'
     LEAGUE_ID = os.environ.get("LEAGUE_ID") or 'TBA'
-

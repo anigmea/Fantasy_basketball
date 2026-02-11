@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { healthCheck, getRankings } from "../services/api";
 
-function BoomBust() {
+function Players() {
   const [status, setStatus] = useState("");
   const [rankings, setRankings] = useState<any[]>([]);
 
@@ -21,10 +21,10 @@ function BoomBust() {
       <h1>Fantasy Analyzer</h1>
       <p>{status}</p>
 
-      <h2>Boom/Bust</h2>
+      <h2>Rankings</h2>
       <pre>{JSON.stringify(rankings, null, 2)}</pre>
     </div>
   );
 }
 
-export default BoomBust;
+export default Players;

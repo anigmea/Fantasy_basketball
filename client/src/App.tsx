@@ -1,13 +1,14 @@
 import { Link, Outlet } from "react-router-dom";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react'
+import { NavBar } from "./components/NavBar";
+import { Center, Circle, Square } from "@chakra-ui/react"
 
 function App() {
   return (
     <div>
-      <nav>
-        <Link to="/">Home</Link>
-        <Link to="/boombust">Boom Bust</Link>
-      </nav>
-      
+      <Center  h="180px" >
+        <NavBar />
+      </Center>
       <Outlet />
     </div>
   );
