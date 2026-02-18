@@ -139,7 +139,6 @@ def recommend_best_players(db, model, games_remaining=3, top_n=25, include_injur
         "expected_week_points": pred_ppg * games_remaining
       })
 
-  process_collection(TEAM_PLAYERS_COL)
   process_collection(FREE_AGENTS_COL)
 
   results.sort(key=lambda r: r["expected_week_points"], reverse=True)
