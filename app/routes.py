@@ -6,7 +6,7 @@ from flask import render_template # import the render_template() function to use
 from flask import request # Flask provides a request variable that contains all the information that the client sent with the request (send user to the page they originally requested after they log in)
 from urllib.parse import urlsplit # A function that parses a URL and has a .netloc component that reveals if the url is a relative path within the app or includes an outside domain name, which is dangerous and should be ignored
 from app.espn_calls.boom_bust_calls import get_boom_bust_players
-from app.models.waiver_regression import load_training_data, train_model
+from app.models.waiver_regression import load_training_data, train_model, recommend_replacements_by_name
 
 
 # ROUTE FOR PLAYER RANKINGS
@@ -45,33 +45,57 @@ def index(): # this is a view function mapped to one or more route URLs so Flask
 @app.route('/replacements', methods=['GET', 'POST'])
 def replacements():
     form = SearchForm()
+    replacements = []
+    err = None
+
     if form.validate_on_submit(): 
         # call database for user search here
-        return redirect(url_for('replacements')) 
+        player_name = form.search.data
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    replacements = []
+        try:
+            X, y = load_training_data(db)
+            model, metrics = train_model(X, y)
 
-    return render_template('replacements.html', title='Replacements', form=form, replacements=replacements) 
+            recs, err = recommend_replacements_by_name(
+                db,
+                model,
+                player_name=player_name,
+                games_remaining=3,
+                top_n=50,
+                include_injured=False
+            )
+            replacements = recs
+
+        except Exception as e:
+            err = str(e)
+
+
+    return render_template('replacements.html', title='Replacements', form=form, replacements=replacements, err=err) 
 
 # ROUTE FOR Boom/bust
 @app.route('/boombust', methods=['GET', 'POST'])
 def boombust():
     form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('boombust')) 
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    players = []
+    include_injured = True
+    year = 2026
+    min_games = 10
 
-    return render_template('boombust.html', title='Boom/Bust', form=form, players=players)
+    booms = []
+    busts = []
+    err = None
+
+    try:
+        booms, busts = get_boom_bust_players(
+            db,
+            include_injured=include_injured,
+            year=year,
+            min_games=min_games
+        )
+    except Exception as e:
+        err = str(e)
+
+    return render_template('boombust.html', title='Boom/Bust', form=form, booms=booms, busts=busts, err=err)
 
 # ROUTE FOR schedule tracker
 @app.route('/schedule', methods=['GET', 'POST'])
