@@ -76,6 +76,9 @@ def replacements():
 @app.route('/boombust', methods=['GET', 'POST'])
 def boombust():
     form = SearchForm()
+    if form.validate_on_submit(): 
+        # call database for user search here
+        return redirect(url_for('boombust'))
 
     include_injured = True
     year = 2026
