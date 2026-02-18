@@ -1,45 +1,64 @@
 from typing import List, Dict, Optional
+from firebase_admin import firestore
+
+# Collections
+SCOREBOARD_COL = "scoreboard"
 
 
-def get_team_schedule(league, team_id: int, week: Optional[int] = None) -> List[Dict]:
+def get_team_schedule(db, team_id: int, week: Optional[int] = None) -> List[Dict]:
+    """Return schedule for a team using a Firestore-like `db` collection named 'scoreboard'."""
     results = []
+    if db is None:
+        return results
     try:
-        sb = league.scoreboard(week=week)
+        q = db.collection(SCOREBOARD_COL)
+        docs = [doc.to_dict() for doc in q.stream()]
     except Exception:
         return results
-    for matchup in sb:
-        try:
-            home = getattr(matchup, "home_team", None) or getattr(matchup, "home", None)
-            away = getattr(matchup, "away_team", None) or getattr(matchup, "away", None)
-        except Exception:
-            continue
+
+    for matchup in docs:
+        home = matchup.get("home_team") or matchup.get("home")
+        away = matchup.get("away_team") or matchup.get("away")
         for team_obj, side, opp in ((home, "home", away), (away, "away", home)):
-            if team_obj is None:
+            if not team_obj:
                 continue
-            tid = getattr(team_obj, "team_id", None) or getattr(team_obj, "teamId", None) or getattr(team_obj, "id", None)
+            tid = team_obj.get("team_id") or team_obj.get("teamId") or team_obj.get("id")
             if tid == team_id:
-                opp_id = getattr(opp, "team_id", None) or getattr(opp, "teamId", None) or getattr(opp, "id", None) if opp else None
-                opp_name = getattr(opp, "team_name", None) or getattr(opp, "teamName", None) or getattr(opp, "name", None) if opp else None
-                points_for = getattr(matchup, "home_score", None) if side == "home" else getattr(matchup, "away_score", None)
-                points_against = getattr(matchup, "away_score", None) if side == "home" else getattr(matchup, "home_score", None)
-                results.append({"team_id": tid, "team_name": getattr(team_obj, "team_name", None) or getattr(team_obj, "teamName", None) or getattr(team_obj, "name", None), "week": week, "opponent_id": opp_id, "opponent_name": opp_name, "home_away": side, "points_for": points_for, "points_against": points_against})
+                opp_id = opp.get("team_id") or opp.get("teamId") or opp.get("id") if opp else None
+                opp_name = opp.get("team_name") or opp.get("teamName") or opp.get("name") if opp else None
+                points_for = matchup.get("home_score") if side == "home" else matchup.get("away_score")
+                points_against = matchup.get("away_score") if side == "home" else matchup.get("home_score")
+                results.append({
+                    "team_id": tid,
+                    "team_name": team_obj.get("team_name") or team_obj.get("teamName") or team_obj.get("name"),
+                    "week": week,
+                    "opponent_id": opp_id,
+                    "opponent_name": opp_name,
+                    "home_away": side,
+                    "points_for": points_for,
+                    "points_against": points_against,
+                })
     return results
 
 
-def get_games_left_in_week(league, week: int) -> Dict[int, int]:
+def get_games_left_in_week(db, week: int) -> Dict[int, int]:
     games_left = {}
+    if db is None:
+        return games_left
     try:
-        sb = league.scoreboard(week=week)
+        q = db.collection(SCOREBOARD_COL)
+        docs = [doc.to_dict() for doc in q.stream()]
     except Exception:
         return games_left
-    for matchup in sb:
-        home_score = getattr(matchup, "home_score", None)
-        away_score = getattr(matchup, "away_score", None)
+
+    for matchup in docs:
+        home_score = matchup.get("home_score")
+        away_score = matchup.get("away_score")
         if home_score is None or away_score is None:
-            home = getattr(matchup, "home_team", None) or getattr(matchup, "home", None)
-            away = getattr(matchup, "away_team", None) or getattr(matchup, "away", None)
-            home_id = getattr(home, "team_id", None) or getattr(home, "teamId", None) if home else None
-            away_id = getattr(away, "team_id", None) or getattr(away, "teamId", None) if away else None
+            home = matchup.get("home_team") or matchup.get("home")
+            away = matchup.get("away_team") or matchup.get("away")
+            home_id = home.get("team_id") or home.get("teamId") if home else None
+            away_id = away.get("team_id") or away.get("teamId") if away else None
             if home_id:
                 games_left[home_id] = games_left.get(home_id, 0) + 1
             if away_id:
