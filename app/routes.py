@@ -9,6 +9,31 @@ from app.espn_calls.boom_bust_calls import get_boom_bust_players
 from app.models.waiver_regression import load_training_data, train_model, recommend_replacements_by_name
 from app.espn_calls.rankings_calls import generate_player_rankings
 from app.espn_calls.trade_calls import evaluate_trade
+from app.espn_calls.schedule_calls import get_team_schedule, get_games_left_in_week
+from datetime import datetime, timedelta, timezone
+
+
+# Helper functions
+def _parse_iso(dt_str):
+    return datetime.fromisoformat(dt_str)
+
+def _normalize_name(s):
+    if not isinstance(s, str):
+        return ""
+    return s.strip().lower()
+
+def _find_player_by_name_in_db(db, name):
+    q = _normalize_name(name)
+    if not q:
+        return None
+    
+    for col in ("team_players", "free_agents"):
+        for doc in db.collection(col).stream():
+            p = doc.to_dict()
+            pname = _normalize_name(p.get("name"))
+            if pname and q in pname:
+                return p
+    return None
 
 
 # ROUTE FOR PLAYER RANKINGS
@@ -100,36 +125,45 @@ def boombust():
 @app.route('/schedule', methods=['GET', 'POST'])
 def schedule():
     form = SearchForm()
+    games = []
+    err = None
+    player = None
+
     if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('schedule')) 
+        player_name = form.search.data
+        try:
+            player = _find_player_by_name_in_db(db, player_name)
+            if not player:
+                err = f"Player not found: {player_name}"
+            else:
+                sched = player.get("schedule") or {}
+                rows = []
+                for game_id, info in sched.items():
+                    dt_str = info.get("date")
+                    opp = info.get("team")
+                    if not dt_str:
+                        continue
+                    try:
+                        dt = _parse_iso(dt_str)
+                    except Exception:
+                        continue
+                    rows.append({
+                        "game_id": game_id,
+                        "date": dt,
+                        "opponent": opp
+                    })
+                rows.sort(key=lambda r: r["date"])
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    teams = []
+                now = datetime.now()
+                end = now + timedelta(days = 7)
+                games = [r for r in rows if now <= r["date"] <= end]
 
-    return render_template('schedule.html', title='Schedule', form=form, teams=teams)
+        except Exception as e:
+            err = str(e)
+
+    return render_template('schedule.html', title='Schedule', form=form, player=player, games=games, err=err)
 
 # ROUTE FOR trade analyzer
-# Helper functions
-def _normalize_name(s):
-    return (s or "").strip().lower()
-
-def _find_player_by_name_in_db(db, name):
-    q = _normalize_name(name)
-    if not q:
-        return None
-    
-    for col in ("team_players", "free_agents"):
-        for doc in db.collection(col).stream():
-            p = doc.to_dict()
-            pname = _normalize_name(p.get("name"))
-            if pname and q in pname:
-                return p
-    return None
-
 @app.route('/trade', methods=['GET', 'POST'])
 def trade():
     err = None
