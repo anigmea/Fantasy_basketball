@@ -7,6 +7,8 @@ from flask import request # Flask provides a request variable that contains all 
 from urllib.parse import urlsplit # A function that parses a URL and has a .netloc component that reveals if the url is a relative path within the app or includes an outside domain name, which is dangerous and should be ignored
 from app.espn_calls.boom_bust_calls import get_boom_bust_players
 from app.models.waiver_regression import load_training_data, train_model, recommend_replacements_by_name
+from app.espn_calls.rankings_calls import generate_player_rankings
+from app.espn_calls.trade_calls import evaluate_trade
 
 
 # ROUTE FOR PLAYER RANKINGS
@@ -18,28 +20,22 @@ def index(): # this is a view function mapped to one or more route URLs so Flask
         # call database for user search here
         return redirect(url_for('index')) # refresh application to show changes (we ain't using websockets) (this will also have to take parameter)
     
-    # Example Firestore query
-    # results = (
-    #     db.collection("users")
-    #         .where("username", "==", query)
-    #         .stream()
-    #     )
-    # users = [doc.to_dict() for doc in results]
+    rankings = []
+    err = None
+    position = request.args.get("position")
+    top_n = request.args.get("top_n")
 
-    # Get team players
-    team_players = (
-        db.collection("team_players").limit(10).stream() # only get 10 to avoid high reads during development
-    )
+    try:
+        rankings = generate_player_rankings(
+            db,
+            by="avg_points",
+            position=position if position else None,
+            top_n=int(top_n) if top_n else 50
+        )
+    except Exception as e:
+        err = str(e)
 
-    # Get free agents
-    free_agents = (
-        db.collection("free_agents").limit(10).stream() 
-    )
-
-    team_players = [doc.to_dict() for doc in team_players] # [{'name': 'LeBron James'}, {'name': 'Michael Jordan'}]
-    free_agents = [doc.to_dict() for doc in free_agents]
-
-    return render_template('index.html', title='Player Rankings', form=form, team_players=team_players, free_agents=free_agents)
+    return render_template('index.html', title='Player Rankings', form=form, rankings=rankings, err=err)
 
 # ROUTE FOR PLAYER WAIVER/INJURY REPLACEMENT
 @app.route('/replacements', methods=['GET', 'POST'])
@@ -117,20 +113,56 @@ def schedule():
     return render_template('schedule.html', title='Schedule', form=form, teams=teams)
 
 # ROUTE FOR trade analyzer
+# Helper functions
+def _normalize_name(s):
+    return (s or "").strip().lower()
+
+def _find_player_by_name_in_db(db, name):
+    q = _normalize_name(name)
+    if not q:
+        return None
+    
+    for col in ("team_players", "free_agents"):
+        for doc in db.collection(col).stream():
+            p = doc.to_dict()
+            pname = _normalize_name(p.get("name"))
+            if pname and q in pname:
+                return p
+    return None
+
 @app.route('/trade', methods=['GET', 'POST'])
 def trade():
-    form = SearchForm()
-    if form.validate_on_submit(): 
-        # call database for user search here
-        return redirect(url_for('trade')) 
+    err = None
+    result = None
+    score = None
+    winner = None
 
-    # results = (
-    #     db.collection("Players").stream()
-    # )
-    # players = [doc.to_dict() for doc in results] 
-    players = []
+    if request.method == "POST":
+        left_name = request.form.get("left_player")
+        right_name = request.form.get("right_player")
 
-    return render_template('trade.html', title='Trades', form=form, players=players)
+        left_p = _find_player_by_name_in_db(db, left_name)
+        right_p = _find_player_by_name_in_db(db, right_name)
+
+        if left_name is None or right_p is None:
+            missing = []
+            if left_p is None: missing.append(left_name or "(left player)")
+            if right_p is None: missing.append(right_name or "(right player)")
+            err = f"Player(s) not found: {', '.join(missing)}"
+        else:
+            left_id = left_p.get("playerId") or left_p.get("id")
+            right_id = right_p.get("playerId") or right_p.get("id")
+
+            result = evaluate_trade(
+                db,
+                give_a_ids=[left_id], receive_a_ids=[right_id],
+                give_b_ids=[right_id], receive_b_ids=[left_id]
+            )
+
+            score = float(result["team_a"]["delta"] - result["team_b"]["delta"])
+            winner = "Team A" if score > 0 else ("Team B" if score < 0 else "Even")
+
+    return render_template('trade.html', title='Trades', err=err, result=result, score=score, winner=winner)
 
 
 
