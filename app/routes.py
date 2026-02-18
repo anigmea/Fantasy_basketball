@@ -144,7 +144,7 @@ def trade():
         left_p = _find_player_by_name_in_db(db, left_name)
         right_p = _find_player_by_name_in_db(db, right_name)
 
-        if left_name is None or right_p is None:
+        if left_p is None or right_p is None:
             missing = []
             if left_p is None: missing.append(left_name or "(left player)")
             if right_p is None: missing.append(right_name or "(right player)")
