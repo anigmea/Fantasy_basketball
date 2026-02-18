@@ -102,6 +102,13 @@
           grid-template-columns: 1fr;
         }
       }
+      .page-container {
+        max-width: 1200px;  
+        width: 100%;   
+        margin: 0 auto;      
+        padding: 0 24px; 
+        margin-top: 7rem;    
+      }
     </style>
   </head>
 
@@ -114,7 +121,7 @@
         <a href="{{url_for('trade')}}">Trade</a>
     </nav>
 
-    <div>
+    <div class="page-container">
       {% block content %}{% endblock %}
     </div>
 

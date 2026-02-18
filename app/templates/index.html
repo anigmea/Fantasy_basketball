@@ -2,48 +2,184 @@
 
 {% block content %}
 
-<h1>Player Rankings</h1>
+<div class="page-header">
+  <h1>Player Rankings</h1>
+  <p class="page-subtitle">All rostered players and available free agents</p>
+</div>
 
 <div class="tables">
 
   <!-- TEAM PLAYERS -->
-  <div>
-    <h2>Team Players</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for player in team_players %}
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Team Players</h2>
+      <span class="results-count">{{ team_players | length }} players</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="results-table">
+        <thead>
           <tr>
-            <td>{{ player.name }}</td>
+            <th class="col-rank">#</th>
+            <th class="col-name">Name</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for player in team_players %}
+          <tr class="result-row">
+            <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
+            <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- FREE AGENTS -->
-  <div>
-    <h2>Free Agents</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for player in free_agents %}
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Free Agents</h2>
+      <span class="results-count">{{ free_agents | length }} players</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="results-table">
+        <thead>
           <tr>
-            <td>{{ player.name }}</td>
+            <th class="col-rank">#</th>
+            <th class="col-name">Name</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for player in free_agents %}
+          <tr class="result-row">
+            <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
+            <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>
+
+<style>
+/* ── Layout ──────────────────────────────────────────────── */
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 1.8rem;
+  color: #eaeaea;
+  margin-bottom: 0.4rem;
+}
+
+.page-subtitle {
+  color: #888;
+  font-size: 0.95rem;
+}
+
+.tables {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  width: 100%;
+  align-self: center;
+  justify-content: center;
+}
+
+/* ── Results ─────────────────────────────────────────────── */
+.results-section {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.results-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0 2px;
+}
+
+.results-header h2 {
+  font-size: 1.1rem;
+  color: #eaeaea;
+  margin: 0;
+}
+
+.results-count {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* ── Table ───────────────────────────────────────────────── */
+.table-wrapper {
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.results-table thead {
+  background: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.results-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #666;
+}
+
+.results-table th.col-rank {
+  text-align: center;
+}
+
+.result-row {
+  border-bottom: 1px solid #1e1e1e;
+  transition: background 0.12s;
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-row:hover {
+  background: #1e2530;
+}
+
+.results-table td {
+  padding: 12px 14px;
+  color: #d0d0d0;
+  vertical-align: middle;
+}
+
+.results-table td.col-rank {
+  text-align: center;
+}
+
+.rank-num {
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #eaeaea;
+}
+</style>
 
 {% endblock %}
