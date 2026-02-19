@@ -1,11 +1,763 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Put content unique to the deliverable this page is supposed to show here in the form of html</h1>
 
-    {% for player in players %}
-    <h2>{{ player }}</h2>
-    {% endfor %}
+<div class="page-header">
+  <h1>Trade Analyzer</h1>
+  <p class="page-subtitle">Compare players and evaluate trade value</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW 1: INPUT FORM
+     ══════════════════════════════════════════════════════════ -->
+<div id="view-input">
+
+  <div class="trade-form-wrapper">
+
+    <!-- YOU GIVE -->
+    <div class="trade-side" id="side-give">
+      <div class="side-label">
+        <span class="side-label-text">You Give</span>
+      </div>
+      <div class="player-slots" id="slots-give">
+        <div class="player-slot primary-slot">
+          <input type="text" class="player-input" placeholder="Player name..." data-slot="give-0" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-give-0"></div>
+        </div>
+        <div class="player-slot secondary-slot">
+          <input type="text" class="player-input" placeholder="Add player..." data-slot="give-1" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-give-1"></div>
+        </div>
+        <div class="player-slot secondary-slot">
+          <input type="text" class="player-input" placeholder="Add player..." data-slot="give-2" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-give-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOR divider -->
+    <div class="for-divider">
+      <div class="for-line"></div>
+      <span class="for-text">FOR</span>
+      <div class="for-line"></div>
+    </div>
+
+    <!-- YOU RECEIVE -->
+    <div class="trade-side" id="side-receive">
+      <div class="side-label">
+        <span class="side-label-text">You Receive</span>
+      </div>
+      <div class="player-slots" id="slots-receive">
+        <div class="player-slot primary-slot">
+          <input type="text" class="player-input" placeholder="Player name..." data-slot="receive-0" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-receive-0"></div>
+        </div>
+        <div class="player-slot secondary-slot">
+          <input type="text" class="player-input" placeholder="Add player..." data-slot="receive-1" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-receive-1"></div>
+        </div>
+        <div class="player-slot secondary-slot">
+          <input type="text" class="player-input" placeholder="Add player..." data-slot="receive-2" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="ac-receive-2"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Analyze button -->
+  <div class="analyze-btn-wrapper">
+    <button class="analyze-btn" id="analyze-btn" onclick="showAnalysis()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Analyze Trade
+    </button>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW 2: ANALYSIS RESULTS
+     ══════════════════════════════════════════════════════════ -->
+<div id="view-analysis" class="hidden analysis-section">
+
+  <!-- Back button -->
+  <button class="back-btn" onclick="showInput()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Back
+  </button>
+
+  <!-- Trade header -->
+  <div class="analysis-header">
+    <div class="trade-player-label" id="label-give">LeBron James</div>
+    <div class="vs-text">for</div>
+    <div class="trade-player-label" id="label-receive">Anthony Davis</div>
+  </div>
+
+  <!-- ── TRADE BALANCE BAR ───────────────────────────────── -->
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Trade Value</h2>
+    </div>
+
+    <div class="balance-card">
+      <div class="balance-sides">
+        <div class="balance-side-label give-color" id="balance-give-name">You Give</div>
+        <div class="balance-verdict" id="balance-verdict">Slight Advantage</div>
+        <div class="balance-side-label receive-color" id="balance-receive-name">You Receive</div>
+      </div>
+
+      <!-- Bar -->
+      <div class="balance-bar-track">
+        <div class="balance-bar-fill" id="balance-bar"></div>
+        <div class="balance-bar-marker"></div>
+      </div>
+
+      <!-- Score labels -->
+      <div class="balance-scores">
+        <span class="balance-score give-color" id="score-give">72.4</span>
+        <span class="balance-score receive-color" id="score-receive">81.1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STAT COMPARISON ────────────────────────────────── -->
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Season Averages</h2>
+    </div>
+    <div class="table-wrapper">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Stat</th>
+            <th class="give-color" id="th-give">LeBron James</th>
+            <th class="receive-color" id="th-receive">Anthony Davis</th>
+          </tr>
+        </thead>
+        <tbody id="stat-tbody">
+          <!-- Injected by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PERFORMANCE CHART ──────────────────────────────── -->
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Fantasy Points — Last 10 Weeks</h2>
+      <div class="chart-legend">
+        <span class="legend-dot give-dot"></span><span class="legend-label" id="legend-give">LeBron James</span>
+        <span class="legend-dot receive-dot"></span><span class="legend-label" id="legend-receive">Anthony Davis</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="performance-chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     STYLES
+     ══════════════════════════════════════════════════════════ -->
+<style>
+/* ── Layout ──────────────────────────────────────────────── */
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.page-header h1 {
+  font-size: 1.8rem;
+  color: #eaeaea;
+  margin-bottom: 0.4rem;
+}
+.page-subtitle {
+  color: #888;
+  font-size: 0.95rem;
+}
+.hidden { display: none !important; }
+
+/* ── Trade Form ──────────────────────────────────────────── */
+.trade-form-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  max-width: 820px;
+  margin: 0 auto 2rem;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.trade-side {
+  flex: 1;
+  padding: 2rem;
+}
+
+#side-give   { background: #141a22; border-right: 1px solid #2a2a2a; }
+#side-receive { background: #1a1a1a; }
+
+.side-label {
+  margin-bottom: 1.2rem;
+}
+
+.side-label-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #555;
+}
+
+.player-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-slot {
+  position: relative;
+}
+
+.player-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 7px;
+  color: #eaeaea;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.primary-slot .player-input {
+  background: #111825;
+  border-color: #3a5aaa;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.player-input:focus {
+  border-color: #7aa2ff;
+}
+
+.player-input::placeholder {
+  color: #444;
+}
+
+/* Autocomplete */
+.autocomplete-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 7px;
+  z-index: 50;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+.autocomplete-dropdown.open { display: block; }
+
+.ac-item {
+  padding: 9px 14px;
+  font-size: 0.88rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.ac-item:hover { background: #2a3a4a; color: #eaeaea; }
+.ac-item .ac-pos {
+  font-size: 0.72rem;
+  color: #555;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* For divider */
+.for-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 8px;
+  min-width: 52px;
+}
+.for-line {
+  width: 1px;
+  flex: 1;
+  background: #2a2a2a;
+}
+.for-text {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #444;
+}
+
+/* Analyze button */
+.analyze-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.analyze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 36px;
+  background: #7aa2ff;
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, transform 0.1s;
+}
+.analyze-btn:hover  { background: #5a8aef; }
+.analyze-btn:active { transform: scale(0.98); }
+
+/* ── Analysis View ───────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+.back-btn:hover { color: #aaa; border-color: #3a3a3a; }
+
+.analysis-section {
+    margin-bottom: 10rem;
+}
+
+.analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.trade-player-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #eaeaea;
+}
+.vs-text {
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 600;
+}
+
+/* ── Results sections (shared) ───────────────────────────── */
+.results-section {
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  width: 100%;
+}
+.results-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0 2px;
+}
+.results-header h2 {
+  font-size: 1.1rem;
+  color: #eaeaea;
+  margin: 0;
+}
+
+/* ── Balance Bar ─────────────────────────────────────────── */
+.balance-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+}
+.balance-sides {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.balance-side-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.balance-verdict {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  text-align: center;
+}
+.balance-bar-track {
+  position: relative;
+  height: 10px;
+  background: #2a2a2a;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+.balance-bar-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.balance-bar-marker {
+  position: absolute;
+  top: 0; left: 50%;
+  width: 2px; height: 100%;
+  background: #3a3a3a;
+  transform: translateX(-50%);
+}
+.balance-scores {
+  display: flex;
+  justify-content: space-between;
+}
+.balance-score {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Color accents */
+.give-color    { color: #7aa2ff; }
+.receive-color { color: #6bcf7f; }
+
+/* ── Stat Table ──────────────────────────────────────────── */
+.table-wrapper {
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.results-table thead {
+  background: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
+}
+.results-table th {
+  padding: 11px 14px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #666;
+}
+.results-table th:first-child { text-align: left; color: #555; }
+.results-table td {
+  padding: 11px 14px;
+  color: #d0d0d0;
+  border-bottom: 1px solid #1e1e1e;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.results-table tr:last-child td { border-bottom: none; }
+.results-table td:first-child { text-align: left; color: #888; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.results-table tr:hover td { background: #1e2530; }
+.stat-winner { color: #eaeaea; font-weight: 700; }
+.stat-loser  { color: #555; }
+
+/* ── Chart ───────────────────────────────────────────────── */
+.chart-container {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 1.5rem;
+  position: relative;
+  height: 280px;
+}
+canvas#performance-chart {
+  width: 100% !important;
+  height: 100% !important;
+}
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.give-dot    { background: #7aa2ff; }
+.receive-dot { background: #6bcf7f; }
+.legend-label { color: #888; font-weight: 600; }
+</style>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPT
+     ══════════════════════════════════════════════════════════ -->
+<script>
+// ── Hardcoded example player pool ────────────────────────────
+const PLAYERS = [
+  { name: "LeBron James",      pos: "SF",  tradeValue: 72.4, stats: { PPG: 25.1, RPG: 7.4, APG: 8.3, FG: "50.2%", "3PM": 2.1 }, weeklyPts: [38,42,31,45,29,52,41,38,44,40] },
+  { name: "Anthony Davis",     pos: "PF",  tradeValue: 81.1, stats: { PPG: 27.3, RPG: 12.1, APG: 3.5, FG: "56.1%", "3PM": 0.8 }, weeklyPts: [52,48,44,60,38,55,62,41,58,50] },
+  { name: "Nikola Jokic",      pos: "C",   tradeValue: 95.8, stats: { PPG: 26.4, RPG: 12.4, APG: 9.0, FG: "58.3%", "3PM": 1.4 }, weeklyPts: [60,58,72,55,64,68,70,62,58,74] },
+  { name: "Stephen Curry",     pos: "PG",  tradeValue: 88.2, stats: { PPG: 29.8, RPG: 5.1, APG: 6.3, FG: "49.3%", "3PM": 5.2 }, weeklyPts: [55,62,48,70,58,44,66,72,50,60] },
+  { name: "Jayson Tatum",      pos: "SF",  tradeValue: 83.5, stats: { PPG: 26.9, RPG: 8.1, APG: 4.9, FG: "46.6%", "3PM": 3.1 }, weeklyPts: [48,52,44,58,40,62,50,44,55,48] },
+  { name: "Joel Embiid",       pos: "C",   tradeValue: 90.1, stats: { PPG: 33.1, RPG: 11.2, APG: 4.2, FG: "52.8%", "3PM": 1.0 }, weeklyPts: [65,70,58,72,44,68,74,60,66,70] },
+  { name: "Luka Doncic",       pos: "PG",  tradeValue: 94.3, stats: { PPG: 32.4, RPG: 8.6, APG: 9.8, FG: "48.7%", "3PM": 3.6 }, weeklyPts: [68,72,60,78,55,70,74,65,72,68] },
+  { name: "Giannis Antetokounmpo", pos: "PF", tradeValue: 91.7, stats: { PPG: 30.4, RPG: 11.5, APG: 5.9, FG: "61.1%", "3PM": 0.3 }, weeklyPts: [62,70,58,75,68,72,65,74,60,70] },
+  { name: "Devin Booker",      pos: "SG",  tradeValue: 78.9, stats: { PPG: 27.2, RPG: 4.5, APG: 6.7, FG: "47.1%", "3PM": 3.3 }, weeklyPts: [45,52,40,58,48,55,60,44,52,48] },
+  { name: "Damian Lillard",    pos: "PG",  tradeValue: 76.4, stats: { PPG: 24.3, RPG: 4.4, APG: 7.3, FG: "44.1%", "3PM": 4.1 }, weeklyPts: [42,48,38,55,44,50,58,40,48,44] },
+  { name: "Kevin Durant",      pos: "SF",  tradeValue: 86.6, stats: { PPG: 28.0, RPG: 6.7, APG: 5.0, FG: "53.0%", "3PM": 2.2 }, weeklyPts: [55,60,50,65,52,62,58,55,60,55] },
+  { name: "Shai Gilgeous-Alexander", pos: "PG", tradeValue: 89.4, stats: { PPG: 30.1, RPG: 5.5, APG: 6.2, FG: "53.5%", "3PM": 1.8 }, weeklyPts: [58,65,55,70,60,68,62,58,65,62] },
+];
+
+const STAT_KEYS = ["PPG", "RPG", "APG", "FG", "3PM"];
+
+let givePlayer    = null;
+let receivePlayer = null;
+let chartInstance = null;
+
+// ── Autocomplete ─────────────────────────────────────────────
+document.querySelectorAll('.player-input').forEach(function(input) {
+  const slotId = input.dataset.slot;
+  const dropdown = document.getElementById('ac-' + slotId);
+
+  input.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    dropdown.innerHTML = '';
+
+    if (!query) { dropdown.classList.remove('open'); return; }
+
+    const matches = PLAYERS.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5);
+    if (!matches.length) { dropdown.classList.remove('open'); return; }
+
+    matches.forEach(function(player) {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.innerHTML = player.name + '<span class="ac-pos">' + player.pos + '</span>';
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        input.value = player.name;
+        dropdown.classList.remove('open');
+
+        // Store selection
+        if (slotId === 'give-0')    givePlayer    = player;
+        if (slotId === 'receive-0') receivePlayer = player;
+      });
+      dropdown.appendChild(item);
+    });
+
+    dropdown.classList.add('open');
+  });
+
+  input.addEventListener('blur', function() {
+    setTimeout(() => dropdown.classList.remove('open'), 150);
+  });
+});
+
+// ── Show analysis ─────────────────────────────────────────────
+function showAnalysis() {
+  // Fall back to first two players if nothing selected (demo mode)
+  if (!givePlayer)    givePlayer    = PLAYERS[0];
+  if (!receivePlayer) receivePlayer = PLAYERS[1];
+
+  // Update labels
+  document.getElementById('label-give').textContent    = givePlayer.name;
+  document.getElementById('label-receive').textContent = receivePlayer.name;
+  document.getElementById('balance-give-name').textContent    = givePlayer.name;
+  document.getElementById('balance-receive-name').textContent = receivePlayer.name;
+  document.getElementById('th-give').textContent    = givePlayer.name;
+  document.getElementById('th-receive').textContent = receivePlayer.name;
+  document.getElementById('legend-give').textContent    = givePlayer.name;
+  document.getElementById('legend-receive').textContent = receivePlayer.name;
+
+  // Balance bar
+  const gv = givePlayer.tradeValue;
+  const rv = receivePlayer.tradeValue;
+  const total = gv + rv;
+  const givePct = (gv / total) * 100;
+
+  document.getElementById('score-give').textContent    = gv.toFixed(1);
+  document.getElementById('score-receive').textContent = rv.toFixed(1);
+
+  const bar = document.getElementById('balance-bar');
+  bar.style.width = givePct + '%';
+
+  // Color bar based on who wins
+  const diff = Math.abs(gv - rv);
+  if (diff < 3) {
+    bar.style.background = 'linear-gradient(90deg, #4a7adf, #5abf6f)';
+    document.getElementById('balance-verdict').textContent = 'Even Trade';
+  } else if (gv > rv) {
+    bar.style.background = 'linear-gradient(90deg, #4a7adf, #7aa2ff)';
+    document.getElementById('balance-verdict').textContent = gv - rv > 10 ? 'You\'re Giving Too Much' : 'Slight Disadvantage';
+  } else {
+    bar.style.background = 'linear-gradient(90deg, #4a7adf, #6bcf7f)';
+    document.getElementById('balance-verdict').textContent = rv - gv > 10 ? 'Great Value for You' : 'Slight Advantage';
+  }
+
+  // Stat table
+  const tbody = document.getElementById('stat-tbody');
+  tbody.innerHTML = '';
+  STAT_KEYS.forEach(function(stat) {
+    const gStat = givePlayer.stats[stat];
+    const rStat = receivePlayer.stats[stat];
+
+    // Simple numeric comparison for winner highlight
+    const gNum = parseFloat(gStat);
+    const rNum = parseFloat(rStat);
+    const gWins = !isNaN(gNum) && !isNaN(rNum) && gNum > rNum;
+    const rWins = !isNaN(gNum) && !isNaN(rNum) && rNum > gNum;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + stat + '</td>' +
+      '<td class="' + (gWins ? 'stat-winner give-color' : 'stat-loser') + '">' + gStat + '</td>' +
+      '<td class="' + (rWins ? 'stat-winner receive-color' : 'stat-loser') + '">' + rStat + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  // Show analysis view
+  document.getElementById('view-input').classList.add('hidden');
+  document.getElementById('view-analysis').classList.remove('hidden');
+
+  // Draw chart after view is visible
+  requestAnimationFrame(drawChart);
+}
+
+// ── Back to input ─────────────────────────────────────────────
+function showInput() {
+  document.getElementById('view-analysis').classList.add('hidden');
+  document.getElementById('view-input').classList.remove('hidden');
+}
+
+// ── Canvas line chart ─────────────────────────────────────────
+function drawChart() {
+  const canvas = document.getElementById('performance-chart');
+  const container = canvas.parentElement;
+  canvas.width  = container.clientWidth  - 48; // account for padding
+  canvas.height = container.clientHeight - 48;
+
+  const ctx    = canvas.getContext('2d');
+  const W      = canvas.width;
+  const H      = canvas.height;
+  const weeks  = givePlayer.weeklyPts.length;
+  const labels = givePlayer.weeklyPts.map((_, i) => 'Wk ' + (i + 1));
+
+  const allPts = [...givePlayer.weeklyPts, ...receivePlayer.weeklyPts];
+  const minPt  = Math.floor(Math.min(...allPts) / 10) * 10;
+  const maxPt  = Math.ceil(Math.max(...allPts)  / 10) * 10 + 10;
+
+  const padL = 40, padR = 20, padT = 16, padB = 32;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = padT + (chartH / gridLines) * i;
+    const val = Math.round(maxPt - ((maxPt - minPt) / gridLines) * i);
+    ctx.beginPath();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + chartW, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#444';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val, padL - 6, y + 4);
+  }
+
+  // X labels
+  ctx.fillStyle = '#444';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  for (let i = 0; i < weeks; i++) {
+    const x = padL + (chartW / (weeks - 1)) * i;
+    ctx.fillText(labels[i], x, H - padB + 18);
+  }
+
+  // Draw a player line with area fill
+  function drawLine(pts, color) {
+    const xStep = chartW / (weeks - 1);
+
+    // Area fill
+    ctx.beginPath();
+    pts.forEach(function(pt, i) {
+      const x = padL + xStep * i;
+      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(padL + xStep * (weeks - 1), padT + chartH);
+    ctx.lineTo(padL, padT + chartH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+    grad.addColorStop(0,   color.replace(')', ', 0.18)').replace('rgb', 'rgba'));
+    grad.addColorStop(1,   color.replace(')', ', 0.01)').replace('rgb', 'rgba'));
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    pts.forEach(function(pt, i) {
+      const x = padL + xStep * i;
+      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2.5;
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+
+    // Dots
+    pts.forEach(function(pt, i) {
+      const x = padL + xStep * i;
+      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#121212';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  }
+
+  drawLine(givePlayer.weeklyPts,    'rgb(122, 162, 255)'); // blue
+  drawLine(receivePlayer.weeklyPts, 'rgb(107, 207, 127)'); // green
+}
+</script>
 
 {% endblock %}
-

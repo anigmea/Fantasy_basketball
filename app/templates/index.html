@@ -7,60 +7,42 @@
   <p class="page-subtitle">All rostered players and available free agents</p>
 </div>
 
-<div class="tables">
+<!-- STATUS FILTER -->
+<div class="filter-bar">
+  <button class="filter-pill active" data-filter="all">All</button>
+  <button class="filter-pill" data-filter="rostered">Rostered</button>
+  <button class="filter-pill" data-filter="free_agent">Free Agents</button>
+  <span class="results-count" id="player-count">{{ players | length }} players</span>
+</div>
 
-  <!-- TEAM PLAYERS -->
-  <div class="results-section">
-    <div class="results-header">
-      <h2>Team Players</h2>
-      <span class="results-count">{{ team_players | length }} players</span>
-    </div>
-    <div class="table-wrapper">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th class="col-rank">#</th>
-            <th class="col-name">Name</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for player in team_players %}
-          <tr class="result-row">
-            <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
-            <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<!-- PLAYER TABLE -->
+<div class="results-section">
+  <div class="table-wrapper">
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="col-rank">#</th>
+          <th class="col-name">Name</th>
+          <th class="col-status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for player in players %}
+        <tr class="result-row" data-status="{{ player.status }}">
+          <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
+          <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
+          <td class="col-status">
+            {% if player.status == "rostered" %}
+              <span class="status-badge status-rostered">Rostered</span>
+            {% else %}
+              <span class="status-badge status-fa">Free Agent</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-
-  <!-- FREE AGENTS -->
-  <div class="results-section">
-    <div class="results-header">
-      <h2>Free Agents</h2>
-      <span class="results-count">{{ free_agents | length }} players</span>
-    </div>
-    <div class="table-wrapper">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th class="col-rank">#</th>
-            <th class="col-name">Name</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for player in free_agents %}
-          <tr class="result-row">
-            <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
-            <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
 </div>
 
 <style>
@@ -81,39 +63,52 @@
   font-size: 0.95rem;
 }
 
-.tables {
+/* ── Filter Bar ──────────────────────────────────────────── */
+.filter-bar {
   display: flex;
-  flex-direction: row;
-  gap: 2rem;
-  width: 100%;
-  align-self: center;
-  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  max-width: 900px;
+  margin: 0 auto 1rem;
+  padding: 0 2px;
 }
 
-/* ── Results ─────────────────────────────────────────────── */
+.filter-pill {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.filter-pill:hover {
+  color: #aaa;
+  border-color: #3a3a3a;
+  background: #222;
+}
+
+.filter-pill.active {
+  color: #7aa2ff;
+  background: #1a2540;
+  border-color: #3a5aaa;
+}
+
+.results-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+/* ── Results Section ─────────────────────────────────────── */
 .results-section {
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
-}
-
-.results-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  padding: 0 2px;
-}
-
-.results-header h2 {
-  font-size: 1.1rem;
-  color: #eaeaea;
-  margin: 0;
-}
-
-.results-count {
-  font-size: 0.8rem;
-  color: #666;
+  margin-bottom: 10rem;
 }
 
 /* ── Table ───────────────────────────────────────────────── */
@@ -144,7 +139,8 @@
   color: #666;
 }
 
-.results-table th.col-rank {
+.results-table th.col-rank,
+.results-table th.col-status {
   text-align: center;
 }
 
@@ -153,13 +149,10 @@
   transition: background 0.12s;
 }
 
-.result-row:last-child {
-  border-bottom: none;
-}
+.result-row:last-child { border-bottom: none; }
+.result-row:hover { background: #1e2530; }
 
-.result-row:hover {
-  background: #1e2530;
-}
+.result-row.row-hidden { display: none; }
 
 .results-table td {
   padding: 12px 14px;
@@ -167,7 +160,8 @@
   vertical-align: middle;
 }
 
-.results-table td.col-rank {
+.results-table td.col-rank,
+.results-table td.col-status {
   text-align: center;
 }
 
@@ -180,6 +174,50 @@
   font-weight: 600;
   color: #eaeaea;
 }
+
+/* ── Status Badges ───────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.status-rostered { background: #1e2e4a; color: #7aa2ff; }
+.status-fa       { background: #1e3a2a; color: #6bcf7f; }
 </style>
+
+<script>
+(function () {
+  const pills      = document.querySelectorAll('.filter-pill');
+  const rows       = Array.from(document.querySelectorAll('.result-row'));
+  const countLabel = document.getElementById('player-count');
+  const total      = rows.length;
+
+  pills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      const filter = this.dataset.filter;
+
+      // Update active pill
+      pills.forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+
+      // Show/hide rows and recount
+      let visible = 0;
+      rows.forEach(function (row) {
+        const match = filter === 'all' || row.dataset.status === filter;
+        row.classList.toggle('row-hidden', !match);
+        if (match) visible++;
+      });
+
+      // Update count label
+      countLabel.textContent = filter === 'all'
+        ? `${total} players`
+        : `${visible} of ${total} players`;
+    });
+  });
+})();
+</script>
 
 {% endblock %}
