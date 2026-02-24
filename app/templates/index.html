@@ -4,45 +4,121 @@
 
 <div class="page-header">
   <h1>Player Rankings</h1>
-  <p class="page-subtitle">All rostered players and available free agents</p>
+  <p class="page-subtitle">All players ranked by average fantasy points</p>
 </div>
 
-<!-- STATUS FILTER -->
+<!-- ERROR STATE -->
+{% if err %}
+<div class="error-banner" role="alert">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  {{ err }}
+</div>
+{% endif %}
+
+<!-- FILTER BAR -->
 <div class="filter-bar">
   <button class="filter-pill active" data-filter="all">All</button>
-  <button class="filter-pill" data-filter="rostered">Rostered</button>
-  <button class="filter-pill" data-filter="free_agent">Free Agents</button>
-  <span class="results-count" id="player-count">{{ players | length }} players</span>
+  {% set positions = rankings | map(attribute='position') | select | unique | sort | list %}
+  {% for pos in positions %}
+    <button class="filter-pill" data-filter="{{ pos }}">{{ pos }}</button>
+  {% endfor %}
+  <span class="results-count" id="player-count">{{ rankings | length }} players</span>
 </div>
 
-<!-- PLAYER TABLE -->
+<!-- RANKINGS TABLE -->
 <div class="results-section">
+  {% if rankings %}
   <div class="table-wrapper">
     <table class="results-table">
       <thead>
         <tr>
           <th class="col-rank">#</th>
-          <th class="col-name">Name</th>
-          <th class="col-status">Status</th>
+          <th class="col-name">Player</th>
+          <th class="col-pos">Position</th>
+          <th class="col-team">Team</th>
+          <th class="col-avg">Avg Pts</th>
+          <th class="col-proj">Proj Avg</th>
+          <th class="col-total">Total Pts</th>
         </tr>
       </thead>
       <tbody>
-        {% for player in players %}
-        <tr class="result-row" data-status="{{ player.status }}">
-          <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
-          <td class="col-name"><span class="player-name">{{ player.name }}</span></td>
-          <td class="col-status">
-            {% if player.status == "rostered" %}
-              <span class="status-badge status-rostered">Rostered</span>
+        {% for player in rankings %}
+        <tr class="result-row" data-position="{{ player.position or '' }}">
+
+          <!-- Rank -->
+          <td class="col-rank">
+            {% if loop.index == 1 %}
+              <span class="rank-badge rank-1">1</span>
+            {% elif loop.index == 2 %}
+              <span class="rank-badge rank-2">2</span>
+            {% elif loop.index == 3 %}
+              <span class="rank-badge rank-3">3</span>
             {% else %}
-              <span class="status-badge status-fa">Free Agent</span>
+              <span class="rank-num">{{ loop.index }}</span>
             {% endif %}
           </td>
+
+          <!-- Name -->
+          <td class="col-name">
+            <span class="player-name">{{ player.name or "—" }}</span>
+          </td>
+
+          <!-- Position -->
+          <td class="col-pos">
+            {% if player.position %}
+              <span class="pos-badge pos-{{ player.position | lower }}">{{ player.position }}</span>
+            {% else %}
+              <span class="pts-pending">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Team -->
+          <td class="col-team">
+            <span class="team-label">{{ player.proTeam or "—" }}</span>
+          </td>
+
+          <!-- Avg Points -->
+          <td class="col-avg">
+            {% if player.avg_points is not none %}
+              <span class="avg-value">{{ "%.1f" | format(player.avg_points) }}</span>
+            {% else %}
+              <span class="pts-pending">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Projected Avg -->
+          <td class="col-proj">
+            {% if player.projected_avg_points is not none %}
+              <span class="proj-value">{{ "%.1f" | format(player.projected_avg_points) }}</span>
+            {% else %}
+              <span class="pts-pending">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Total Points -->
+          <td class="col-total">
+            {% if player.total_points is not none %}
+              <span class="total-value">{{ "%.0f" | format(player.total_points) }}</span>
+            {% else %}
+              <span class="pts-pending">—</span>
+            {% endif %}
+          </td>
+
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <p>No player data available.</p>
+  </div>
+  {% endif %}
 </div>
 
 <style>
@@ -51,28 +127,38 @@
   text-align: center;
   margin-bottom: 2rem;
 }
-
 .page-header h1 {
   font-size: 1.8rem;
   color: #eaeaea;
   margin-bottom: 0.4rem;
 }
+.page-subtitle { color: #888; font-size: 0.95rem; }
 
-.page-subtitle {
-  color: #888;
-  font-size: 0.95rem;
+/* ── Error Banner ────────────────────────────────────────── */
+.error-banner {
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  padding: 12px 16px;
+  background: #3a1a1a;
+  border: 1px solid #5a2a2a;
+  border-radius: 8px;
+  color: #ff8a8a;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ── Filter Bar ──────────────────────────────────────────── */
 .filter-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   max-width: 900px;
   margin: 0 auto 1rem;
   padding: 0 2px;
 }
-
 .filter-pill {
   padding: 6px 16px;
   border-radius: 20px;
@@ -84,31 +170,15 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-
-.filter-pill:hover {
-  color: #aaa;
-  border-color: #3a3a3a;
-  background: #222;
-}
-
-.filter-pill.active {
-  color: #7aa2ff;
-  background: #1a2540;
-  border-color: #3a5aaa;
-}
-
-.results-count {
-  margin-left: auto;
-  font-size: 0.8rem;
-  color: #555;
-}
+.filter-pill:hover { color: #aaa; border-color: #3a3a3a; background: #222; }
+.filter-pill.active { color: #7aa2ff; background: #1a2540; border-color: #3a5aaa; }
+.results-count { margin-left: auto; font-size: 0.8rem; color: #555; }
 
 /* ── Results Section ─────────────────────────────────────── */
 .results-section {
   max-width: 900px;
-  margin: 0 auto;
+  margin: 0 auto 4rem;
   width: 100%;
-  margin-bottom: 10rem;
 }
 
 /* ── Table ───────────────────────────────────────────────── */
@@ -117,18 +187,15 @@
   border-radius: 10px;
   overflow: hidden;
 }
-
 .results-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
-
 .results-table thead {
   background: #1e1e1e;
   border-bottom: 1px solid #2a2a2a;
 }
-
 .results-table th {
   padding: 11px 14px;
   text-align: left;
@@ -138,20 +205,17 @@
   letter-spacing: 0.07em;
   color: #666;
 }
-
 .results-table th.col-rank,
-.results-table th.col-status {
-  text-align: center;
-}
+.results-table th.col-avg,
+.results-table th.col-proj,
+.results-table th.col-total { text-align: center; }
 
 .result-row {
   border-bottom: 1px solid #1e1e1e;
   transition: background 0.12s;
 }
-
 .result-row:last-child { border-bottom: none; }
 .result-row:hover { background: #1e2530; }
-
 .result-row.row-hidden { display: none; }
 
 .results-table td {
@@ -159,33 +223,59 @@
   color: #d0d0d0;
   vertical-align: middle;
 }
-
 .results-table td.col-rank,
-.results-table td.col-status {
-  text-align: center;
-}
+.results-table td.col-avg,
+.results-table td.col-proj,
+.results-table td.col-total { text-align: center; }
 
-.rank-num {
-  color: #555;
-  font-size: 0.85rem;
+/* Rank badges */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
+.rank-1 { background: #3a2e0a; color: #ffd700; }
+.rank-2 { background: #252525; color: #c0c0c0; }
+.rank-3 { background: #2a1a10; color: #cd7f32; }
+.rank-num { color: #555; font-size: 0.85rem; }
 
-.player-name {
-  font-weight: 600;
-  color: #eaeaea;
-}
+/* Player name */
+.player-name { font-weight: 600; color: #eaeaea; }
 
-/* ── Status Badges ───────────────────────────────────────── */
-.status-badge {
+/* Position badges */
+.pos-badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 4px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: #1e2e4a;
+  color: #7aa2ff;
 }
 
-.status-rostered { background: #1e2e4a; color: #7aa2ff; }
-.status-fa       { background: #1e3a2a; color: #6bcf7f; }
+/* Value types */
+.team-label { color: #888; font-size: 0.85rem; font-weight: 600; }
+.avg-value   { font-weight: 700; color: #eaeaea; font-variant-numeric: tabular-nums; }
+.proj-value  { font-weight: 600; color: #7aa2ff; font-variant-numeric: tabular-nums; }
+.total-value { font-weight: 600; color: #c8e6ff; font-variant-numeric: tabular-nums; }
+.pts-pending { color: #444; }
+
+/* ── Empty State ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.empty-state p { font-size: 0.95rem; max-width: 360px; }
 </style>
 
 <script>
@@ -198,20 +288,16 @@
   pills.forEach(function (pill) {
     pill.addEventListener('click', function () {
       const filter = this.dataset.filter;
-
-      // Update active pill
       pills.forEach(p => p.classList.remove('active'));
       this.classList.add('active');
 
-      // Show/hide rows and recount
       let visible = 0;
       rows.forEach(function (row) {
-        const match = filter === 'all' || row.dataset.status === filter;
+        const match = filter === 'all' || row.dataset.position === filter;
         row.classList.toggle('row-hidden', !match);
         if (match) visible++;
       });
 
-      // Update count label
       countLabel.textContent = filter === 'all'
         ? `${total} players`
         : `${visible} of ${total} players`;
