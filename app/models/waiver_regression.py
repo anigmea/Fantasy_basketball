@@ -5,6 +5,22 @@ from sklearn.model_selection import train_test_split
 TEAM_PLAYERS_COL = "team_players"
 FREE_AGENTS_COL = "free_agents"
 
+# Position compatibility map: positions that can flex-fill for a given slot
+POSITION_FLEX_MAP = {
+  "PG":   {"PG"},
+  "SG":   {"SG"},
+  "SF":   {"SF"},
+  "PF":   {"PF"},
+  "C":    {"C"},
+  "G":    {"PG", "SG"},
+  "F":    {"SF", "PF"},
+  "UTIL": {"PG", "SG", "SF", "PF", "C", "G", "F"},
+}
+
+# Score boost for same-position match (keeps same-pos candidates ranked higher)
+POSITION_MATCH_BONUS = 5.0
+
+
 def _doc_to_row(p: dict):
   '''
   Converts Firestore player dict to (features, target) for regression
@@ -99,6 +115,19 @@ def train_model(X, y, test_size=0.2, random_state=42):
   return model, metrics
 
 
+def _positions_compatible(target_pos: str, candidate_pos: str) -> bool:
+  '''Return True if candidate_pos can fill a roster slot for target_pos.'''
+  if not target_pos or not candidate_pos:
+    return True  # unknown -> allow all
+  target_pos = target_pos.upper()
+  candidate_pos = candidate_pos.upper()
+  if target_pos == candidate_pos:
+    return True
+  allowed = POSITION_FLEX_MAP.get(target_pos, set())
+  return candidate_pos in allowed
+
+
+
 def recommend_best_players(db, model, games_remaining=3, top_n=25, include_injured=False):
   '''Returns top players across team_players + free_agents, ranked by expected points for the rest of the week'''
 
@@ -127,22 +156,44 @@ def recommend_best_players(db, model, games_remaining=3, top_n=25, include_injur
         X_row = [[float(x1), float(x2), float(injured_num)]]
       except (TypeError, ValueError):
         continue
+      
 
       pred_ppg = float(model.predict(X_row)[0])
+      candidate_pos = (p.get("position") or "").upper()
+      target_pos_norm = (target_position or "").upper()
+
+      exact_match = bool(target_pos_norm and candidate_pos == target_pos_norm)
+      flex_match  = (
+        not target_pos_norm or
+        _positions_compatible(target_pos_norm, candidate_pos)
+      ) 
+
+      if not flex_match:
+        continue
+
+      ranking_score = pred_ppg + (POSITION_MATCH_BONUS if exact_match else 0.0)
+
+
       results.append({
         "playerId": pid,
         "name": p.get("name"),
         "position": p.get("position"),
-        "injured": p.get("injured"),
+        "proTeam": p.get("proTeam") or p.get("team"),
+        "injured": bool(p.get("injured")),
         "predicted_ppg": pred_ppg,
         "games_remaining": games_remaining,
-        "expected_week_points": pred_ppg * games_remaining
+        "expected_week_points": pred_ppg * games_remaining,
+        "position_match": exact_match,
+        "_ranking_score": ranking_score,
       })
 
   process_collection(FREE_AGENTS_COL)
   process_collection(TEAM_PLAYERS_COL)
 
   results.sort(key=lambda r: r["expected_week_points"], reverse=True)
+  # Drop internal sort key before returning
+  for r in results:
+    r.pop("_ranking_score", None)
   return results[:top_n]
 
 
@@ -161,18 +212,63 @@ def find_player_by_name(db, name):
 
   return None
 
+
+
+
+def get_injured_players(db):
+  '''Returns all injured players from team_players + free_agents, sorted by avg_points desc.'''
+  seen = set()
+  injured = []
+
+  for col in (TEAM_PLAYERS_COL, FREE_AGENTS_COL):
+    try:
+      for doc in db.collection(col).stream():
+        p = doc.to_dict()
+        pid = p.get("playerId")
+        if pid is None or pid in seen:
+          continue
+        seen.add(pid)
+        if p.get("injured"):
+          injured.append({
+            "playerId": pid,
+            "name": p.get("name"),
+            "position": p.get("position"),
+            "proTeam": p.get("proTeam") or p.get("team"),
+            "avg_points": p.get("avg_points"),
+            "projected_avg_points": p.get("projected_avg_points"),
+            "injured": True,
+          })
+    except Exception:
+      pass
+
+  injured.sort(key=lambda p: p.get("avg_points") or 0, reverse=True)
+  return injured
+
+
 def recommend_replacements_by_name(db, model, player_name, games_remaining=3, top_n=25, include_injured=False):
   '''
   Feature flow:
   1) user enters player name
   2) we return top-N players from the overall NBA pool
+  3) Returns top-N position-compatible replacements, exact matches ranked first
+
   '''
   target = find_player_by_name(db, player_name)
 
   if target is None:
     return [], f"Player not found for name: {player_name}"
+  
+  target_position = target.get("position")
 
-  recs = recommend_best_players(db, model, games_remaining=games_remaining, top_n=top_n, include_injured=include_injured)
+  recs = recommend_best_players(
+    db,
+    model,
+    target_position=target_position,
+    games_remaining=games_remaining,
+    top_n=top_n,
+    include_injured=include_injured,
+  )
+
 
   target_id = target.get("playerId")
   if target_id is not None:
@@ -186,5 +282,6 @@ __all__ = [
   "train_model",
   "recommend_best_players",
   "find_player_by_name",
+  "get_injured_players",
   "recommend_replacements_by_name",
 ]
