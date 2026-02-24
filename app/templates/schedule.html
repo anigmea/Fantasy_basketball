@@ -4,399 +4,515 @@
 
 <div class="page-header">
   <h1>Schedule Tracker</h1>
-  <p class="page-subtitle">Weekly matchups and games remaining</p>
+  <p class="page-subtitle" id="subtitle-grid">NBA team game counts by week, month, or remaining season</p>
+  <p class="page-subtitle italic hidden" id="subtitle-player">Search a player to see their schedule</p>
 </div>
 
-<!-- WEEK SELECTOR -->
-<div class="week-nav">
-  {% for w in range(1, 11) %}
-    <a href="{{ url_for('schedule', week=w) }}"
-       class="week-pill {% if w == current_week %}active{% endif %}">
-      Wk {{ w }}
-    </a>
-  {% endfor %}
+<!-- VIEW TOGGLE -->
+<div class="view-toggle">
+  <button class="view-btn active" data-view="grid" id="btn-grid">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+    Team Grid
+  </button>
+  <button class="view-btn" data-view="player" id="btn-player">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    Player Search
+  </button>
 </div>
 
-<!-- ERROR STATE -->
-{% if err %}
-<div class="error-banner" role="alert">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="12" y1="8" x2="12" y2="12"/>
-    <line x1="12" y1="16" x2="12.01" y2="16"/>
-  </svg>
-  {{ err }}
-</div>
-{% endif %}
+<!-- VIEW A: TEAM SCHEDULE GRID -->
+<div id="view-grid">
 
-{% if schedule %}
-
-<!-- GAMES LEFT SUMMARY BAR -->
-{% if games_left %}
-<div class="results-section">
-  <div class="results-header">
-    <h2>Games Remaining This Week</h2>
-    <span class="results-count">Week {{ current_week }}</span>
+  <!-- TIME RANGE TABS -->
+  <div class="range-tabs">
+    <button class="range-tab active" data-range="week">This Week</button>
+    <button class="range-tab" data-range="month">This Month</button>
+    <button class="range-tab" data-range="season">Rest of Season</button>
   </div>
-  <div class="games-left-grid">
-    {% for team_id, count in games_left.items() %}
-    <div class="games-left-card">
-      <span class="games-left-count {% if count >= 4 %}count-high{% elif count >= 2 %}count-mid{% else %}count-low{% endif %}">
-        {{ count }}
-      </span>
-      <span class="games-left-label">Team {{ team_id }}</span>
+
+  {% if team_schedule %}
+  <!-- GAME COUNT GRID -->
+  <div class="grid-section">
+    <div class="grid-header-row">
+      <span class="grid-legend good-legend">4+ games</span>
+      <span class="grid-legend avg-legend">3 games</span>
+      <span class="grid-legend low-legend">1–2 games</span>
+      <span class="grid-legend zero-legend">0 games</span>
     </div>
-    {% endfor %}
+
+    <div class="team-grid" id="team-grid">
+      {% for entry in team_schedule %}
+      <div class="team-tile"
+           data-week="{{ entry.week_games }}"
+           data-month="{{ entry.month_games }}"
+           data-season="{{ entry.season_games }}"
+           data-games="{{ entry.week_games }}">
+        <div class="tile-abbr">{{ entry.abbr or entry.name[:3].upper() }}</div>
+        <div class="tile-count" id="count-{{ loop.index }}">{{ entry.week_games }}</div>
+        <div class="tile-label">games</div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
-</div>
-{% endif %}
 
-<!-- MATCHUPS TABLE -->
-<div class="results-section">
-  <div class="results-header">
-    <h2>Matchups</h2>
-    <span class="results-count">{{ schedule | length }} game{% if schedule | length != 1 %}s{% endif %}</span>
+  <!-- DETAILED TABLE -->
+  <div class="detail-section">
+    <div class="detail-header">
+      <h2>All Teams — <span id="range-label">This Week</span></h2>
+      <span class="results-count" id="best-teams-label"></span>
+    </div>
+    <div class="table-wrapper">
+      <table class="results-table" id="schedule-table">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Team</th>
+            <th class="col-center">Games</th>
+            <th class="col-center">Opponents</th>
+            <th class="col-bar"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in team_schedule %}
+          <tr class="result-row sched-row"
+              data-week="{{ entry.week_games }}"
+              data-month="{{ entry.month_games }}"
+              data-season="{{ entry.season_games }}">
+            <td class="col-rank"><span class="rank-num" id="rank-{{ loop.index }}">{{ loop.index }}</span></td>
+            <td>
+              <span class="team-name">{{ entry.name }}</span>
+              <span class="team-abbr">{{ entry.abbr or '' }}</span>
+            </td>
+            <td class="col-center">
+              <span class="game-count" id="tbl-count-{{ loop.index }}" data-week="{{ entry.week_games }}" data-month="{{ entry.month_games }}" data-season="{{ entry.season_games }}">
+                {{ entry.week_games }}
+              </span>
+            </td>
+            <td class="col-center">
+              <span class="opp-list">{{ entry.week_opponents | join(', ') if entry.week_opponents else '—' }}</span>
+            </td>
+            <td class="col-bar">
+              <div class="sched-bar-track">
+                <div class="sched-bar-fill" data-week="{{ entry.week_games }}" data-month="{{ entry.month_games }}" data-season="{{ entry.season_games }}" data-max-week="{{ team_schedule | map(attribute='week_games') | max }}" data-max-month="{{ team_schedule | map(attribute='month_games') | max }}" data-max-season="{{ team_schedule | map(attribute='season_games') | max }}"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="table-wrapper">
-    <table class="results-table">
-      <thead>
-        <tr>
-          <th class="col-team">Your Team</th>
-          <th class="col-ha">Home / Away</th>
-          <th class="col-opp">Opponent</th>
-          <th class="col-pts">Pts For</th>
-          <th class="col-pts">Pts Against</th>
-          <th class="col-result">Result</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for game in schedule %}
-        {% set has_score = game.points_for is not none and game.points_against is not none %}
-        {% set won = has_score and game.points_for > game.points_against %}
-        {% set lost = has_score and game.points_for < game.points_against %}
-        <tr class="result-row {% if won %}row-win{% elif lost %}row-loss{% endif %}">
-
-          <!-- Your team -->
-          <td class="col-team">
-            <span class="team-name">{{ game.team_name or "—" }}</span>
-          </td>
-
-          <!-- Home / Away -->
-          <td class="col-ha">
-            <span class="ha-badge ha-{{ game.home_away }}">
-              {{ game.home_away | upper }}
-            </span>
-          </td>
-
-          <!-- Opponent -->
-          <td class="col-opp">
-            <span class="opp-name">{{ game.opponent_name or "TBD" }}</span>
-          </td>
-
-          <!-- Points for -->
-          <td class="col-pts">
-            {% if game.points_for is not none %}
-              <span class="pts-value">{{ "%.1f" | format(game.points_for) }}</span>
-            {% else %}
-              <span class="pts-pending">—</span>
-            {% endif %}
-          </td>
-
-          <!-- Points against -->
-          <td class="col-pts">
-            {% if game.points_against is not none %}
-              <span class="pts-value">{{ "%.1f" | format(game.points_against) }}</span>
-            {% else %}
-              <span class="pts-pending">—</span>
-            {% endif %}
-          </td>
-
-          <!-- Result -->
-          <td class="col-result">
-            {% if has_score %}
-              {% if won %}
-                <span class="result-badge result-win">W</span>
-              {% elif lost %}
-                <span class="result-badge result-loss">L</span>
-              {% else %}
-                <span class="result-badge result-tie">T</span>
-              {% endif %}
-            {% else %}
-              <span class="result-badge result-upcoming">TBD</span>
-            {% endif %}
-          </td>
-
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% else %}
+  <!-- NO SCHEDULE DATA -->
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+    <p>No schedule data available yet.</p>
   </div>
+  {% endif %}
 </div>
 
-{% else %}
+<!-- VIEW B: PLAYER SEARCH -->
+<div id="view-player" class="hidden">
 
-<!-- EMPTY STATE -->
-<div class="empty-state">
-  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
-    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-  <p>No matchups found for Week {{ current_week }}.</p>
+  <!-- SEARCH FORM -->
+  <div class="search-section">
+    <form method="POST" action="{{ url_for('schedule') }}" id="search-form">
+      {{ form.hidden_tag() }}
+      <div class="search-bar">
+        {{ form.search(
+            id="player-search",
+            placeholder="e.g. LeBron James...",
+            autocomplete="off",
+            class="search-input"
+        ) }}
+        <button type="submit" class="search-btn">
+          <span class="btn-text">Search</span>
+          <span class="btn-spinner btn-hidden">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ERROR STATE -->
+  {% if err %}
+  <div class="error-banner" role="alert">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {{ err }}
+  </div>
+  {% endif %}
+
+  <!-- PLAYER RESULTS -->
+  {% if player %}
+  <div class="player-card">
+    <div class="player-card-name">{{ player.name or "Unknown Player" }}</div>
+    <div class="player-card-meta">
+      {% if player.position %}
+        <span class="pos-badge pos-{{ player.position | lower }}">{{ player.position }}</span>
+      {% endif %}
+      {% if player.proTeam or player.team %}
+        <span class="team-label-small">{{ player.proTeam or player.team }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if games %}
+  <div class="results-section">
+    <div class="results-header">
+      <h2>Upcoming Games — Next 7 Days</h2>
+      <span class="results-count">{{ games | length }} game{% if games | length != 1 %}s{% endif %}</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Opponent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for game in games %}
+          <tr class="result-row">
+            <td class="col-rank"><span class="rank-num">{{ loop.index }}</span></td>
+            <td><span class="date-value">{{ game.date.strftime('%b %d') if game.date else '—' }}</span></td>
+            <td><span class="day-label">{{ game.date.strftime('%A') if game.date else '—' }}</span></td>
+            <td><span class="opp-name">{{ game.opponent or "TBD" }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No games found for {{ player.name }} in the next 7 days.</p>
+  </div>
+  {% endif %}
+
+  {% elif not err %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <p>Search for a player to see their games this week</p>
+  </div>
+  {% endif %}
 </div>
-
-{% endif %}
 
 <style>
-/* ── Layout ──────────────────────────────────────────────── */
-.page-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
+.page-header { text-align: center; margin-bottom: 2rem; }
+.page-header h1 { font-size: 1.8rem; color: #eaeaea; margin-bottom: 0.4rem; }
+.page-subtitle { color: #888; font-size: 0.95rem; }
 
-.page-header h1 {
-  font-size: 1.8rem;
-  color: #eaeaea;
-  margin-bottom: 0.4rem;
+/* View Toggle */
+.view-toggle {
+  display: flex; justify-content: center; gap: 6px;
+  margin-bottom: 1.8rem;
 }
-
-.page-subtitle {
-  color: #888;
-  font-size: 0.95rem;
+.view-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 20px; border-radius: 8px;
+  background: #1a1a1a; border: 1px solid #2a2a2a;
+  color: #666; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
 }
+.view-btn:hover { color: #aaa; border-color: #3a3a3a; background: #222; }
+.view-btn.active { color: #7aa2ff; background: #1a2540; border-color: #3a5aaa; }
 
-/* ── Week Nav ────────────────────────────────────────────── */
-.week-nav {
-  display: flex;
+/* Range Tabs */
+.range-tabs {
+  display: flex; justify-content: center; gap: 4px;
+  margin-bottom: 1.8rem;
+}
+.range-tab {
+  padding: 8px 20px; border-radius: 6px;
+  background: none; border: 1px solid #2a2a2a;
+  color: #666; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.range-tab:hover { color: #aaa; background: #1e1e1e; }
+.range-tab.active { color: #eaeaea; background: #222; border-color: #3a3a3a; }
+
+/* Team Grid */
+.grid-section { max-width: 1100px; margin: 0 auto 2rem; }
+.grid-header-row {
+  display: flex; justify-content: flex-end; gap: 1rem;
+  margin-bottom: 0.8rem; padding: 0 4px;
   flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 2rem;
 }
-
-.week-pill {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: none;
-  color: #666;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+.grid-legend {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 600; color: #666;
 }
-
-.week-pill:hover {
-  color: #aaa;
-  border-color: #3a3a3a;
-  background: #222;
+.grid-legend::before {
+  content: ''; display: inline-block;
+  width: 10px; height: 10px; border-radius: 2px;
 }
+.good-legend::before  { background: #2e6e3a; }
+.avg-legend::before   { background: #1e3a5a; }
+.low-legend::before   { background: #2a2a2a; }
+.zero-legend::before  { background: #1a1a1a; border: 1px solid #2a2a2a; }
 
-.week-pill.active {
-  color: #7aa2ff;
-  background: #1a2540;
-  border-color: #3a5aaa;
-}
-
-/* ── Error Banner ────────────────────────────────────────── */
-.error-banner {
-  max-width: 600px;
-  margin: 0 auto 1.5rem;
-  padding: 12px 16px;
-  background: #3a1a1a;
-  border: 1px solid #5a2a2a;
-  border-radius: 8px;
-  color: #ff8a8a;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 8px;
 }
-
-/* ── Shared Section ──────────────────────────────────────── */
-.results-section {
-  max-width: 900px;
-  margin: 0 auto 2rem;
-  width: 100%;
-}
-
-.results-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  padding: 0 2px;
-}
-
-.results-header h2 {
-  font-size: 1.1rem;
-  color: #eaeaea;
-  margin: 0;
-}
-
-.results-count {
-  font-size: 0.8rem;
-  color: #666;
-}
-
-/* ── Games Left Grid ─────────────────────────────────────── */
-.games-left-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.games-left-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 18px;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+.team-tile {
+  text-align: center;
+  padding: 12px 8px;
   border-radius: 8px;
-  min-width: 72px;
-}
-
-.games-left-count {
-  font-size: 1.6rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.count-high { color: #6bcf7f; }
-.count-mid  { color: #ffd93d; }
-.count-low  { color: #ff8a8a; }
-
-.games-left-label {
-  font-size: 0.72rem;
-  color: #555;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* ── Table ───────────────────────────────────────────────── */
-.table-wrapper {
   border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  overflow: hidden;
+  background: #1a1a1a;
+  transition: all 0.15s;
+  cursor: default;
 }
+.team-tile:hover { border-color: #3a3a3a; background: #222; }
+.team-tile[data-games="0"] { background: #141414; opacity: 0.5; }
+.team-tile[data-games="1"],
+.team-tile[data-games="2"] { background: #1a1a1a; }
+.team-tile[data-games="3"] { background: #141a22; border-color: #1e3050; }
+.team-tile[data-games="4"],
+.team-tile[data-games="5"] { background: #0e2016; border-color: #1e4030; }
 
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+.tile-abbr { font-size: 0.7rem; font-weight: 700; color: #666; letter-spacing: 0.06em; text-transform: uppercase; }
+.tile-count { font-size: 1.6rem; font-weight: 800; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.team-tile[data-games="0"] .tile-count { color: #3a3a3a; }
+.team-tile[data-games="1"] .tile-count,
+.team-tile[data-games="2"] .tile-count { color: #888; }
+.team-tile[data-games="3"] .tile-count { color: #7aa2ff; }
+.team-tile[data-games="4"] .tile-count,
+.team-tile[data-games="5"] .tile-count { color: #6bcf7f; }
+.tile-label { font-size: 0.65rem; color: #444; font-weight: 600; }
+
+/* Detail table */
+.detail-section { max-width: 900px; margin: 0 auto 5rem; }
+.detail-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 1rem; padding: 0 2px;
 }
+.detail-header h2 { font-size: 1.1rem; color: #eaeaea; margin: 0; }
+.results-count { font-size: 0.8rem; color: #666; }
 
-.results-table thead {
-  background: #1e1e1e;
-  border-bottom: 1px solid #2a2a2a;
-}
-
+/* Shared table */
+.table-wrapper { border: 1px solid #2a2a2a; border-radius: 10px; overflow: hidden; }
+.results-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.results-table thead { background: #1e1e1e; border-bottom: 1px solid #2a2a2a; }
 .results-table th {
-  padding: 11px 14px;
-  text-align: left;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #666;
+  padding: 11px 14px; text-align: left;
+  font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em; color: #666;
 }
+.results-table th.col-rank,
+.results-table th.col-center { text-align: center; }
+.results-table th.col-bar { width: 120px; }
 
-.results-table th.col-pts,
-.results-table th.col-result,
-.results-table th.col-ha {
-  text-align: center;
-}
-
-.result-row {
-  border-bottom: 1px solid #1e1e1e;
-  transition: background 0.12s;
-}
-
+.result-row { border-bottom: 1px solid #1e1e1e; transition: background 0.12s; }
 .result-row:last-child { border-bottom: none; }
-.result-row:hover      { background: #1e2530; }
-.result-row.row-win    { background: #0f2018; }
-.result-row.row-win:hover  { background: #152a20; }
-.result-row.row-loss   { background: #20100f; }
-.result-row.row-loss:hover { background: #2a1515; }
+.result-row:hover { background: #1e2530; }
+.results-table td { padding: 11px 14px; color: #d0d0d0; vertical-align: middle; }
+.results-table td.col-rank,
+.results-table td.col-center { text-align: center; }
+.rank-num { color: #555; font-size: 0.85rem; }
 
-.results-table td {
-  padding: 12px 14px;
-  color: #d0d0d0;
-  vertical-align: middle;
+.team-name { font-weight: 600; color: #eaeaea; margin-right: 6px; }
+.team-abbr { font-size: 0.75rem; color: #555; font-weight: 600; }
+
+.game-count { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.game-count[data-current-val="0"] { color: #3a3a3a; }
+
+.opp-list { font-size: 0.8rem; color: #666; }
+
+.sched-bar-track { height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
+.sched-bar-fill  { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #1e4a6a, #7aa2ff); transition: width 0.4s ease; }
+
+/* Error Banner */
+.error-banner {
+  max-width: 600px; margin: 0 auto 1.5rem;
+  padding: 12px 16px; background: #3a1a1a;
+  border: 1px solid #5a2a2a; border-radius: 8px;
+  color: #ff8a8a; font-size: 0.9rem;
+  display: flex; align-items: center; gap: 8px;
 }
 
-.results-table td.col-pts,
-.results-table td.col-result,
-.results-table td.col-ha {
-  text-align: center;
+/* Search */
+.search-section { max-width: 600px; margin: 0 auto 2rem; }
+.search-bar {
+  display: flex; border: 1px solid #3a3a3a; border-radius: 8px;
+  overflow: hidden; background: #1a1a1a; transition: border-color 0.2s;
 }
-
-/* Team / opp names */
-.team-name {
-  font-weight: 600;
-  color: #eaeaea;
+.search-bar:focus-within { border-color: #7aa2ff; }
+.search-input {
+  flex: 1; padding: 12px 16px;
+  background: transparent; border: none; outline: none;
+  color: #eaeaea; font-size: 0.95rem;
 }
-
-.opp-name {
-  color: #aaa;
+.search-input::placeholder { color: #555; }
+.search-btn {
+  padding: 12px 22px; background: #7aa2ff; color: #121212;
+  border: none; cursor: pointer; font-weight: 700; font-size: 0.9rem;
+  transition: background 0.15s; display: flex; align-items: center; gap: 8px;
 }
+.search-btn:hover { background: #5a8aef; }
+.btn-hidden { display: none; }
+.btn-spinner svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* Home/Away badge */
-.ha-badge {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+/* Player Card */
+.player-card {
+  max-width: 900px; margin: 0 auto 1.5rem;
+  padding: 1.2rem 1.5rem; background: #141a22;
+  border: 1px solid #3a5aaa; border-radius: 10px;
+  display: flex; align-items: center; gap: 1rem;
 }
-
-.ha-home { background: #1e2e4a; color: #7aa2ff; }
-.ha-away { background: #2a2040; color: #b07aff; }
-
-/* Points */
-.pts-value {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: #c8e6ff;
+.player-card-name { font-size: 1.1rem; font-weight: 700; color: #eaeaea; }
+.player-card-meta { display: flex; align-items: center; gap: 10px; }
+.pos-badge {
+  display: inline-block; padding: 3px 9px; border-radius: 4px;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+  background: #1e2e4a; color: #7aa2ff;
 }
-
-.pts-pending { color: #444; }
-
-/* Result badges */
-.result-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.team-label-small { color: #666; font-size: 0.85rem; font-weight: 600; }
+.results-section { max-width: 900px; margin: 0 auto 5rem; }
+.results-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 1rem; padding: 0 2px;
 }
+.results-header h2 { font-size: 1.1rem; color: #eaeaea; margin: 0; }
+.date-value { font-weight: 700; color: #eaeaea; font-variant-numeric: tabular-nums; }
+.day-label  { color: #888; font-size: 0.85rem; }
+.opp-name   { font-weight: 600; color: #c8e6ff; }
 
-.result-win      { background: #1e3a2a; color: #6bcf7f; }
-.result-loss     { background: #3a1e1e; color: #ff8a8a; }
-.result-tie      { background: #2a2a1e; color: #ffd93d; }
-.result-upcoming { background: #222; color: #555; }
-
-/* ── Empty State ─────────────────────────────────────────── */
+/* Empty State */
 .empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #555;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  text-align: center; padding: 4rem 2rem; color: #555;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.empty-state p { font-size: 0.95rem; max-width: 360px; }
+
+.hidden { display: none; }
+
+@media (max-width: 600px) {
+  .team-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
 }
 
-.empty-state p {
-  font-size: 0.95rem;
-  max-width: 360px;
-}
 </style>
+
+<script>
+(function () {
+  // View toggle
+  const viewGrid      = document.getElementById('view-grid');
+  const viewPlayer    = document.getElementById('view-player');
+  const subtitleGrid  = document.getElementById('subtitle-grid');
+  const subtitlePlayer = document.getElementById('subtitle-player');
+
+  document.querySelectorAll('.view-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const v = this.dataset.view;
+      viewGrid.classList.toggle('hidden', v !== 'grid');
+      viewPlayer.classList.toggle('hidden', v !== 'player');
+      subtitleGrid.classList.toggle('hidden', v !== 'grid');
+      subtitlePlayer.classList.toggle('hidden', v !== 'player');
+    });
+  });
+
+  {% if player %}
+  document.getElementById('btn-player').click();
+  {% endif %}
+
+  // Range tab logic
+  const rangeTabs  = document.querySelectorAll('.range-tab');
+  const tiles      = document.querySelectorAll('.team-tile');
+  const shedRows   = document.querySelectorAll('.sched-row');
+  const rangeLabel = document.getElementById('range-label');
+  const tblCounts  = document.querySelectorAll('.game-count');
+  const barFills   = document.querySelectorAll('.sched-bar-fill');
+
+  const rangeNames = { week: 'This Week', month: 'This Month', season: 'Rest of Season' };
+
+  function updateRange(range) {
+    if (rangeLabel) rangeLabel.textContent = rangeNames[range] || range;
+
+    tiles.forEach(function (tile) {
+      const v = parseInt(tile.dataset[range]) || 0;
+      tile.dataset.games = v;
+      tile.querySelector('.tile-count').textContent = v;
+    });
+
+    const rows = Array.from(shedRows);
+    rows.forEach(function (row) {
+      const v = parseInt(row.dataset[range]) || 0;
+      const countEl = row.querySelector('.game-count');
+      if (countEl) {
+        countEl.textContent = v;
+        countEl.style.color = v === 0 ? '#3a3a3a' : v >= 4 ? '#6bcf7f' : v === 3 ? '#7aa2ff' : '#888';
+      }
+    });
+
+    const tbody = document.querySelector('#schedule-table tbody');
+    if (!tbody) return;
+    const sorted = rows.slice().sort((a, b) => (parseInt(b.dataset[range]) || 0) - (parseInt(a.dataset[range]) || 0));
+    sorted.forEach(function (row, i) {
+      tbody.appendChild(row);
+      const rankEl = row.querySelector('.rank-num');
+      if (rankEl) rankEl.textContent = i + 1;
+    });
+
+    const maxVal = Math.max(...rows.map(r => parseInt(r.dataset[range]) || 0), 1);
+    barFills.forEach(function (bar) {
+      const row = bar.closest('tr');
+      if (!row) return;
+      const v = parseInt(row.dataset[range]) || 0;
+      bar.style.width = ((v / maxVal) * 100) + '%';
+    });
+  }
+
+  rangeTabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      rangeTabs.forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      updateRange(this.dataset.range);
+    });
+  });
+
+  updateRange('week');
+
+  // Player search spinner
+  const form    = document.getElementById('search-form');
+  const btnText = form ? form.querySelector('.btn-text') : null;
+  const spinner = form ? form.querySelector('.btn-spinner') : null;
+  const input   = document.getElementById('player-search');
+
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      const val = (input ? input.value : '').trim();
+      if (!val) { e.preventDefault(); if (input) input.focus(); return; }
+      if (btnText) btnText.classList.add('btn-hidden');
+      if (spinner) spinner.classList.remove('btn-hidden');
+    });
+  }
+})();
+</script>
 
 {% endblock %}
