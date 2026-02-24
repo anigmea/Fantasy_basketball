@@ -4,34 +4,30 @@
 
 <div class="page-header">
   <h1>Trade Analyzer</h1>
-  <p class="page-subtitle">Compare players and evaluate trade value</p>
+  <p class="page-subtitle">Compare up to 4 players per side — imbalanced trades are automatically weighted</p>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     VIEW 1: INPUT FORM
-     ══════════════════════════════════════════════════════════ -->
-<div id="view-input">
+<!-- TRADE INPUT FORM -->
+<form method="POST" action="{{ url_for('trade') }}" id="trade-form">
 
   <div class="trade-form-wrapper">
 
     <!-- YOU GIVE -->
     <div class="trade-side" id="side-give">
-      <div class="side-label">
-        <span class="side-label-text">You Give</span>
-      </div>
+      <div class="side-label"><span class="side-label-text">You Give</span></div>
       <div class="player-slots" id="slots-give">
-        <div class="player-slot primary-slot">
-          <input type="text" class="player-input" placeholder="Player name..." data-slot="give-0" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-give-0"></div>
+        {% for i in range(4) %}
+        <div class="player-slot">
+          <input
+            type="text"
+            name="give_player_{{ i }}"
+            class="player-input"
+            placeholder="{% if i == 0 %}Player name...{% else %}+ Add player{% endif %}"
+            autocomplete="off"
+            value="{{ request.form.get('give_player_' ~ i, '') }}"
+          />
         </div>
-        <div class="player-slot secondary-slot">
-          <input type="text" class="player-input" placeholder="Add player..." data-slot="give-1" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-give-1"></div>
-        </div>
-        <div class="player-slot secondary-slot">
-          <input type="text" class="player-input" placeholder="Add player..." data-slot="give-2" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-give-2"></div>
-        </div>
+        {% endfor %}
       </div>
     </div>
 
@@ -44,30 +40,31 @@
 
     <!-- YOU RECEIVE -->
     <div class="trade-side" id="side-receive">
-      <div class="side-label">
-        <span class="side-label-text">You Receive</span>
-      </div>
+      <div class="side-label"><span class="side-label-text">You Receive</span></div>
       <div class="player-slots" id="slots-receive">
-        <div class="player-slot primary-slot">
-          <input type="text" class="player-input" placeholder="Player name..." data-slot="receive-0" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-receive-0"></div>
+        {% for i in range(4) %}
+        <div class="player-slot">
+          <input
+            type="text"
+            name="receive_player_{{ i }}"
+            class="player-input"
+            placeholder="{% if i == 0 %}Player name...{% else %}+ Add player{% endif %}"
+            autocomplete="off"
+            value="{{ request.form.get('receive_player_' ~ i, '') }}"
+          />
         </div>
-        <div class="player-slot secondary-slot">
-          <input type="text" class="player-input" placeholder="Add player..." data-slot="receive-1" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-receive-1"></div>
-        </div>
-        <div class="player-slot secondary-slot">
-          <input type="text" class="player-input" placeholder="Add player..." data-slot="receive-2" autocomplete="off" />
-          <div class="autocomplete-dropdown" id="ac-receive-2"></div>
-        </div>
+        {% endfor %}
       </div>
     </div>
 
   </div>
 
+  <!-- Trade count hint -->
+  <div class="trade-hint" id="trade-hint"></div>
+
   <!-- Analyze button -->
   <div class="analyze-btn-wrapper">
-    <button class="analyze-btn" id="analyze-btn" onclick="showAnalysis()">
+    <button type="submit" class="analyze-btn" id="analyze-btn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
       </svg>
@@ -75,689 +72,486 @@
     </button>
   </div>
 
+</form>
+
+<!-- ERROR STATE -->
+{% if err %}
+<div class="error-banner" role="alert">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  {{ err }}
+</div>
+{% endif %}
+
+<!-- ANALYSIS RESULTS -->
+{% if result %}
+
+{% set team_a = result.team_a %}
+{% set team_b = result.team_b %}
+{% set give_names  = result.give_names  or [] %}
+{% set recv_names  = result.recv_names  or [] %}
+
+<!-- TRADE SUMMARY HEADER -->
+<div class="analysis-header">
+  <div class="trade-names give-color">
+    {% for n in give_names %}<span class="trade-name-chip give-chip">{{ n }}</span>{% endfor %}
+  </div>
+  <div class="vs-text">for</div>
+  <div class="trade-names receive-color">
+    {% for n in recv_names %}<span class="trade-name-chip recv-chip">{{ n }}</span>{% endfor %}
+  </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     VIEW 2: ANALYSIS RESULTS
-     ══════════════════════════════════════════════════════════ -->
-<div id="view-analysis" class="hidden analysis-section">
+<!-- Imbalance notice -->
+{% if result.imbalance_note %}
+<div class="imbalance-notice">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  {{ result.imbalance_note }}
+</div>
+{% endif %}
 
-  <!-- Back button -->
-  <button class="back-btn" onclick="showInput()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <polyline points="15 18 9 12 15 6"/>
-    </svg>
-    Back
-  </button>
-
-  <!-- Trade header -->
-  <div class="analysis-header">
-    <div class="trade-player-label" id="label-give">LeBron James</div>
-    <div class="vs-text">for</div>
-    <div class="trade-player-label" id="label-receive">Anthony Davis</div>
-  </div>
-
-  <!-- ── TRADE BALANCE BAR ───────────────────────────────── -->
-  <div class="results-section">
-    <div class="results-header">
-      <h2>Trade Value</h2>
-    </div>
-
-    <div class="balance-card">
-      <div class="balance-sides">
-        <div class="balance-side-label give-color" id="balance-give-name">You Give</div>
-        <div class="balance-verdict" id="balance-verdict">Slight Advantage</div>
-        <div class="balance-side-label receive-color" id="balance-receive-name">You Receive</div>
+<!-- VERDICT CARD -->
+<div class="results-section">
+  <div class="balance-card">
+    <div class="balance-sides">
+      <div class="balance-side-name give-color">You Give</div>
+      <div class="balance-verdict
+        {% if score is not none %}
+          {% if score | abs < 1 %}verdict-even
+          {% elif score > 0 %}verdict-good
+          {% else %}verdict-bad{% endif %}
+        {% endif %}
+      ">
+        {% if score is not none %}
+          {% if score | abs < 1 %}⚖️ Even Trade
+          {% elif score > 5 %}🟢 Great Value for You
+          {% elif score > 0 %}🟡 Slight Advantage
+          {% elif score < -5 %}🔴 You're Giving Too Much
+          {% else %}🟠 Slight Disadvantage{% endif %}
+        {% endif %}
       </div>
+      <div class="balance-side-name receive-color">You Receive</div>
+    </div>
 
-      <!-- Bar -->
-      <div class="balance-bar-track">
-        <div class="balance-bar-fill" id="balance-bar"></div>
-        <div class="balance-bar-marker"></div>
+    {% set pre_a = team_a.pre_trade_value %}
+    {% set pre_b = team_b.pre_trade_value %}
+    {% set total_val = pre_a + pre_b %}
+    {% set give_pct = ((pre_a / total_val) * 100) | int if total_val > 0 else 50 %}
+
+    <div class="balance-bar-track">
+      <div class="balance-bar-fill" id="balance-bar"
+           data-width="{{ give_pct }}"
+           style="width: 0%;
+             {% if score is not none and score | abs < 1 %}background: linear-gradient(90deg,#4a7adf,#5abf6f);
+             {% elif score is not none and score > 0 %}background: linear-gradient(90deg,#4a7adf,#6bcf7f);
+             {% else %}background: linear-gradient(90deg,#4a7adf,#7aa2ff);{% endif %}
+           "></div>
+      <div class="balance-bar-marker"></div>
+    </div>
+
+    <div class="balance-scores">
+      <div class="balance-score-block">
+        <span class="balance-score give-color">{{ "%.1f" | format(pre_a) }}</span>
+        <span class="balance-score-label">You Give</span>
       </div>
-
-      <!-- Score labels -->
-      <div class="balance-scores">
-        <span class="balance-score give-color" id="score-give">72.4</span>
-        <span class="balance-score receive-color" id="score-receive">81.1</span>
+      {% if result.imbalance_note %}
+      <div class="balance-score-block center-block">
+        <span class="penalty-label">⚠️ Imbalance Penalty Applied</span>
       </div>
-    </div>
-  </div>
-
-  <!-- ── STAT COMPARISON ────────────────────────────────── -->
-  <div class="results-section">
-    <div class="results-header">
-      <h2>Season Averages</h2>
-    </div>
-    <div class="table-wrapper">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>Stat</th>
-            <th class="give-color" id="th-give">LeBron James</th>
-            <th class="receive-color" id="th-receive">Anthony Davis</th>
-          </tr>
-        </thead>
-        <tbody id="stat-tbody">
-          <!-- Injected by JS -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── PERFORMANCE CHART ──────────────────────────────── -->
-  <div class="results-section">
-    <div class="results-header">
-      <h2>Fantasy Points — Last 10 Weeks</h2>
-      <div class="chart-legend">
-        <span class="legend-dot give-dot"></span><span class="legend-label" id="legend-give">LeBron James</span>
-        <span class="legend-dot receive-dot"></span><span class="legend-label" id="legend-receive">Anthony Davis</span>
+      {% endif %}
+      <div class="balance-score-block" style="text-align:right">
+        <span class="balance-score receive-color">{{ "%.1f" | format(pre_b) }}</span>
+        <span class="balance-score-label">You Receive</span>
       </div>
     </div>
-    <div class="chart-container">
-      <canvas id="performance-chart"></canvas>
-    </div>
   </div>
-
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     STYLES
-     ══════════════════════════════════════════════════════════ -->
+<!-- VALUE IMPACT TABLE -->
+<div class="results-section">
+  <div class="results-header"><h2>Value Impact</h2></div>
+  <div class="table-wrapper">
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Side</th>
+          <th class="col-center">Players</th>
+          <th class="col-center">Raw Value</th>
+          <th class="col-center">Adj. Value</th>
+          <th class="col-center">Net Delta</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="result-row">
+          <td><span class="side-badge give-color">You Give</span></td>
+          <td class="col-center"><span class="pts-dim">{{ result.give_count }} player{% if result.give_count != 1 %}s{% endif %}</span></td>
+          <td class="col-center"><span class="pts-value give-color">{{ "%.1f" | format(team_a.raw_value) }}</span></td>
+          <td class="col-center"><span class="pts-value">{{ "%.1f" | format(team_a.pre_trade_value) }}</span></td>
+          <td class="col-center">
+            <span class="delta-value {% if team_a.delta >= 0 %}delta-pos{% else %}delta-neg{% endif %}">
+              {% if team_a.delta >= 0 %}+{% endif %}{{ "%.1f" | format(team_a.delta) }}
+            </span>
+          </td>
+        </tr>
+        <tr class="result-row">
+          <td><span class="side-badge receive-color">You Receive</span></td>
+          <td class="col-center"><span class="pts-dim">{{ result.recv_count }} player{% if result.recv_count != 1 %}s{% endif %}</span></td>
+          <td class="col-center"><span class="pts-value receive-color">{{ "%.1f" | format(team_b.raw_value) }}</span></td>
+          <td class="col-center"><span class="pts-value">{{ "%.1f" | format(team_b.pre_trade_value) }}</span></td>
+          <td class="col-center">
+            <span class="delta-value {% if team_b.delta >= 0 %}delta-pos{% else %}delta-neg{% endif %}">
+              {% if team_b.delta >= 0 %}+{% endif %}{{ "%.1f" | format(team_b.delta) }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PLAYER BREAKDOWN CHART -->
+<div class="results-section">
+  <div class="results-header"><h2>Player Value Breakdown</h2></div>
+  <div class="chart-card">
+    <canvas id="trade-chart" height="220"></canvas>
+  </div>
+</div>
+
+<!-- PLAYER DETAIL CARDS  -->
+{% if result.player_details %}
+<div class="results-section last-section">
+  <div class="results-header"><h2>Player Details</h2></div>
+  <div class="player-details-grid">
+    {% for p in result.player_details %}
+    <div class="player-detail-card {% if p.side == 'give' %}give-card{% else %}recv-card{% endif %}">
+      <div class="detail-header-row">
+        <span class="detail-name">{{ p.name }}</span>
+        <span class="pos-badge pos-{{ p.position | lower if p.position else 'u' }}">{{ p.position or "—" }}</span>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <span class="detail-val">{{ "%.1f" | format(p.avg_points) if p.avg_points is not none else "—" }}</span>
+          <span class="detail-label">Avg Pts</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-val proj-col">{{ "%.1f" | format(p.projected_avg_points) if p.projected_avg_points is not none else "—" }}</span>
+          <span class="detail-label">Proj Avg</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-val {% if p.side == 'give' %}give-color{% else %}receive-color{% endif %}">{{ "%.1f" | format(p.trade_value) }}</span>
+          <span class="detail-label">Trade Value</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% elif not err %}
+<div class="empty-state">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+  <p>Enter players above and click Analyze Trade to see results</p>
+</div>
+{% endif %}
+
 <style>
-/* ── Layout ──────────────────────────────────────────────── */
-.page-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-.page-header h1 {
-  font-size: 1.8rem;
-  color: #eaeaea;
-  margin-bottom: 0.4rem;
-}
-.page-subtitle {
-  color: #888;
-  font-size: 0.95rem;
-}
-.hidden { display: none !important; }
+.page-header { text-align: center; margin-bottom: 2rem; }
+.page-header h1 { font-size: 1.8rem; color: #eaeaea; margin-bottom: 0.4rem; }
+.page-subtitle { color: #888; font-size: 0.95rem; }
 
-/* ── Trade Form ──────────────────────────────────────────── */
+/* Error */
+.error-banner {
+  max-width: 820px; margin: 0 auto 1.5rem;
+  padding: 12px 16px; background: #3a1a1a;
+  border: 1px solid #5a2a2a; border-radius: 8px;
+  color: #ff8a8a; font-size: 0.9rem;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Trade Form */
 .trade-form-wrapper {
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-  max-width: 820px;
-  margin: 0 auto 2rem;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 12px;
-  overflow: hidden;
+  display: flex; align-items: stretch;
+  max-width: 820px; margin: 0 auto 1rem;
+  background: #1a1a1a; border: 1px solid #2a2a2a;
+  border-radius: 12px; overflow: hidden;
 }
-
-.trade-side {
-  flex: 1;
-  padding: 2rem;
-}
-
+.trade-side { flex: 1; padding: 2rem; }
 #side-give   { background: #141a22; border-right: 1px solid #2a2a2a; }
 #side-receive { background: #1a1a1a; }
 
-.side-label {
-  margin-bottom: 1.2rem;
-}
-
+.side-label { margin-bottom: 1rem; }
 .side-label-text {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #555;
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: #555;
 }
-
-.player-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.player-slot {
-  position: relative;
-}
-
+.player-slots { display: flex; flex-direction: column; gap: 8px; }
 .player-input {
-  width: 100%;
-  padding: 11px 14px;
-  background: #0f0f0f;
-  border: 1px solid #2a2a2a;
-  border-radius: 7px;
-  color: #eaeaea;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
+  width: 100%; padding: 10px 13px;
+  background: #111825; border: 1px solid #2a3a5a;
+  border-radius: 7px; color: #eaeaea; font-size: 0.9rem;
+  font-weight: 600; outline: none;
+  transition: border-color 0.15s, opacity 0.15s; box-sizing: border-box;
 }
+.player-input:focus { border-color: #7aa2ff; }
+.player-input::placeholder { color: #333; font-weight: 400; font-style: italic; }
+.player-input:not(:placeholder-shown) { border-color: #3a5aaa; }
 
-.primary-slot .player-input {
-  background: #111825;
-  border-color: #3a5aaa;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.player-input:focus {
-  border-color: #7aa2ff;
-}
-
-.player-input::placeholder {
-  color: #444;
-}
-
-/* Autocomplete */
-.autocomplete-dropdown {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0; right: 0;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 7px;
-  z-index: 50;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-}
-.autocomplete-dropdown.open { display: block; }
-
-.ac-item {
-  padding: 9px 14px;
-  font-size: 0.88rem;
-  color: #ccc;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-.ac-item:hover { background: #2a3a4a; color: #eaeaea; }
-.ac-item .ac-pos {
-  font-size: 0.72rem;
-  color: #555;
-  margin-left: 8px;
-  font-weight: 600;
-}
-
-/* For divider */
 .for-divider {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  gap: 8px;
-  min-width: 52px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem 1rem; gap: 8px; min-width: 52px;
 }
-.for-line {
-  width: 1px;
-  flex: 1;
-  background: #2a2a2a;
-}
-.for-text {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #444;
-}
+.for-line { width: 1px; flex: 1; background: #2a2a2a; }
+.for-text { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; color: #444; }
 
-/* Analyze button */
-.analyze-btn-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 2rem;
-}
+.trade-hint { text-align: center; font-size: 0.8rem; color: #666; margin-bottom: 1rem; min-height: 1.2em; }
 
+.analyze-btn-wrapper { display: flex; justify-content: center; margin-bottom: 2.5rem; }
 .analyze-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 36px;
-  background: #7aa2ff;
-  color: #0a0a0a;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0.03em;
-  transition: background 0.15s, transform 0.1s;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 36px; background: #7aa2ff; color: #0a0a0a;
+  border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.03em; transition: background 0.15s, transform 0.1s;
 }
 .analyze-btn:hover  { background: #5a8aef; }
 .analyze-btn:active { transform: scale(0.98); }
 
-/* ── Analysis View ───────────────────────────────────────── */
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  color: #666;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 6px 12px;
-  cursor: pointer;
-  margin-bottom: 1.5rem;
-  transition: color 0.15s, border-color 0.15s;
-}
-.back-btn:hover { color: #aaa; border-color: #3a3a3a; }
-
-.analysis-section {
-    margin-bottom: 10rem;
-}
-
+/* Analysis header */
 .analysis-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  text-align: center;
+  display: flex; align-items: flex-start; justify-content: center;
+  gap: 1rem; margin-bottom: 1.5rem; text-align: center; flex-wrap: wrap;
 }
-.trade-player-label {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #eaeaea;
+.trade-names { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 300px; }
+.trade-name-chip {
+  display: inline-block; padding: 5px 12px; border-radius: 6px;
+  font-size: 0.88rem; font-weight: 700;
 }
-.vs-text {
-  font-size: 0.8rem;
-  color: #555;
-  font-weight: 600;
+.give-chip { background: #1a2540; color: #7aa2ff; }
+.recv-chip { background: #1a2e1a; color: #6bcf7f; }
+.vs-text { font-size: 0.8rem; color: #555; font-weight: 600; align-self: center; white-space: nowrap; }
+
+/* Imbalance notice */
+.imbalance-notice {
+  max-width: 820px; margin: 0 auto 1.5rem;
+  padding: 10px 16px; background: #1e1a0a;
+  border: 1px solid #4a3a10; border-radius: 8px;
+  color: #ffd93d; font-size: 0.85rem;
+  display: flex; align-items: center; gap: 8px;
 }
 
-/* ── Results sections (shared) ───────────────────────────── */
-.results-section {
-  max-width: 900px;
-  margin: 0 auto 2rem;
-  width: 100%;
-}
-.results-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  padding: 0 2px;
-}
-.results-header h2 {
-  font-size: 1.1rem;
-  color: #eaeaea;
-  margin: 0;
-}
+/* Results section */
+.results-section { max-width: 820px; margin: 0 auto 2rem; }
+.results-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem; padding: 0 2px; }
+.results-header h2 { font-size: 1.1rem; color: #eaeaea; margin: 0; }
 
-/* ── Balance Bar ─────────────────────────────────────────── */
+/* Balance card */
 .balance-card {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  padding: 1.5rem 2rem;
+  background: #1a1a1a; border: 1px solid #2a2a2a;
+  border-radius: 10px; padding: 1.5rem 2rem;
 }
 .balance-sides {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 1rem;
 }
-.balance-side-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.balance-verdict {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #888;
-  text-align: center;
-}
+.balance-side-name { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.balance-verdict { font-size: 0.9rem; font-weight: 700; text-align: center; }
+.verdict-even { color: #ffd93d; }
+.verdict-good { color: #6bcf7f; }
+.verdict-bad  { color: #ff8a8a; }
+
 .balance-bar-track {
-  position: relative;
-  height: 10px;
-  background: #2a2a2a;
-  border-radius: 5px;
-  overflow: hidden;
-  margin-bottom: 0.8rem;
+  position: relative; height: 12px;
+  background: #2a2a2a; border-radius: 6px; overflow: hidden; margin-bottom: 1rem;
 }
-.balance-bar-fill {
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  border-radius: 5px;
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+.balance-bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+.balance-bar-marker { position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: #3a3a3a; transform: translateX(-50%); }
+
+.balance-scores { display: flex; justify-content: space-between; align-items: flex-start; }
+.balance-score-block { display: flex; flex-direction: column; }
+.center-block { align-items: center; }
+.balance-score { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.balance-score-label { font-size: 0.7rem; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.penalty-label { font-size: 0.75rem; color: #ffd93d; font-weight: 600; }
+
+/* Table */
+.table-wrapper { border: 1px solid #2a2a2a; border-radius: 10px; overflow: hidden; }
+.results-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.results-table thead { background: #1e1e1e; border-bottom: 1px solid #2a2a2a; }
+.results-table th {
+  padding: 11px 14px; text-align: left; font-size: 0.75rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #666;
 }
-.balance-bar-marker {
-  position: absolute;
-  top: 0; left: 50%;
-  width: 2px; height: 100%;
-  background: #3a3a3a;
-  transform: translateX(-50%);
-}
-.balance-scores {
-  display: flex;
-  justify-content: space-between;
-}
-.balance-score {
-  font-size: 1.1rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.results-table th.col-center { text-align: center; }
+.result-row { border-bottom: 1px solid #1e1e1e; transition: background 0.12s; }
+.result-row:last-child { border-bottom: none; }
+.result-row:hover { background: #1e2530; }
+.results-table td { padding: 12px 14px; color: #d0d0d0; vertical-align: middle; }
+.results-table td.col-center { text-align: center; }
+
+.side-badge { font-weight: 700; font-size: 0.9rem; }
+.pts-value { font-weight: 700; font-variant-numeric: tabular-nums; color: #eaeaea; }
+.pts-dim { font-size: 0.82rem; color: #555; }
+.delta-value { font-weight: 800; font-variant-numeric: tabular-nums; }
+.delta-pos { color: #6bcf7f; }
+.delta-neg { color: #ff8a8a; }
+
+/* ── Chart ─── */
+.chart-card {
+  background: #1a1a1a; border: 1px solid #2a2a2a;
+  border-radius: 10px; padding: 1.5rem;
 }
 
-/* Color accents */
+/* Player detail cards */
+.player-details-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;
+}
+.player-detail-card {
+  padding: 1rem 1.2rem; border-radius: 10px;
+  border: 1px solid #2a2a2a; background: #161616;
+}
+.give-card { border-color: #1e3050; background: #111825; }
+.recv-card { border-color: #1e3020; background: #111a12; }
+.detail-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 0.8rem; flex-wrap: wrap; }
+.detail-name { font-weight: 700; color: #eaeaea; font-size: 0.9rem; flex: 1; }
+.pos-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  background: #1e2e4a; color: #7aa2ff;
+}
+.detail-stats { display: flex; gap: 1rem; }
+.detail-stat { display: flex; flex-direction: column; }
+.detail-val { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #eaeaea; }
+.proj-col { color: #7aa2ff; }
+.detail-label { font-size: 0.65rem; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
 .give-color    { color: #7aa2ff; }
 .receive-color { color: #6bcf7f; }
 
-/* ── Stat Table ──────────────────────────────────────────── */
-.table-wrapper {
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  overflow: hidden;
+/* Empty State */
+.empty-state {
+  text-align: center; padding: 4rem 2rem; color: #555;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
 }
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-.results-table thead {
-  background: #1e1e1e;
-  border-bottom: 1px solid #2a2a2a;
-}
-.results-table th {
-  padding: 11px 14px;
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #666;
-}
-.results-table th:first-child { text-align: left; color: #555; }
-.results-table td {
-  padding: 11px 14px;
-  color: #d0d0d0;
-  border-bottom: 1px solid #1e1e1e;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.results-table tr:last-child td { border-bottom: none; }
-.results-table td:first-child { text-align: left; color: #888; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.results-table tr:hover td { background: #1e2530; }
-.stat-winner { color: #eaeaea; font-weight: 700; }
-.stat-loser  { color: #555; }
+.empty-state p { font-size: 0.95rem; max-width: 360px; }
 
-/* ── Chart ───────────────────────────────────────────────── */
-.chart-container {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  padding: 1.5rem;
-  position: relative;
-  height: 280px;
+.last-section {
+  margin-bottom: 6rem;
 }
-canvas#performance-chart {
-  width: 100% !important;
-  height: 100% !important;
-}
-.chart-legend {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.8rem;
-}
-.legend-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.give-dot    { background: #7aa2ff; }
-.receive-dot { background: #6bcf7f; }
-.legend-label { color: #888; font-weight: 600; }
 </style>
 
-<!-- ══════════════════════════════════════════════════════════
-     SCRIPT
-     ══════════════════════════════════════════════════════════ -->
+{% if result %}
+<!-- Chart.js for player value breakdown -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-// ── Hardcoded example player pool ────────────────────────────
-const PLAYERS = [
-  { name: "LeBron James",      pos: "SF",  tradeValue: 72.4, stats: { PPG: 25.1, RPG: 7.4, APG: 8.3, FG: "50.2%", "3PM": 2.1 }, weeklyPts: [38,42,31,45,29,52,41,38,44,40] },
-  { name: "Anthony Davis",     pos: "PF",  tradeValue: 81.1, stats: { PPG: 27.3, RPG: 12.1, APG: 3.5, FG: "56.1%", "3PM": 0.8 }, weeklyPts: [52,48,44,60,38,55,62,41,58,50] },
-  { name: "Nikola Jokic",      pos: "C",   tradeValue: 95.8, stats: { PPG: 26.4, RPG: 12.4, APG: 9.0, FG: "58.3%", "3PM": 1.4 }, weeklyPts: [60,58,72,55,64,68,70,62,58,74] },
-  { name: "Stephen Curry",     pos: "PG",  tradeValue: 88.2, stats: { PPG: 29.8, RPG: 5.1, APG: 6.3, FG: "49.3%", "3PM": 5.2 }, weeklyPts: [55,62,48,70,58,44,66,72,50,60] },
-  { name: "Jayson Tatum",      pos: "SF",  tradeValue: 83.5, stats: { PPG: 26.9, RPG: 8.1, APG: 4.9, FG: "46.6%", "3PM": 3.1 }, weeklyPts: [48,52,44,58,40,62,50,44,55,48] },
-  { name: "Joel Embiid",       pos: "C",   tradeValue: 90.1, stats: { PPG: 33.1, RPG: 11.2, APG: 4.2, FG: "52.8%", "3PM": 1.0 }, weeklyPts: [65,70,58,72,44,68,74,60,66,70] },
-  { name: "Luka Doncic",       pos: "PG",  tradeValue: 94.3, stats: { PPG: 32.4, RPG: 8.6, APG: 9.8, FG: "48.7%", "3PM": 3.6 }, weeklyPts: [68,72,60,78,55,70,74,65,72,68] },
-  { name: "Giannis Antetokounmpo", pos: "PF", tradeValue: 91.7, stats: { PPG: 30.4, RPG: 11.5, APG: 5.9, FG: "61.1%", "3PM": 0.3 }, weeklyPts: [62,70,58,75,68,72,65,74,60,70] },
-  { name: "Devin Booker",      pos: "SG",  tradeValue: 78.9, stats: { PPG: 27.2, RPG: 4.5, APG: 6.7, FG: "47.1%", "3PM": 3.3 }, weeklyPts: [45,52,40,58,48,55,60,44,52,48] },
-  { name: "Damian Lillard",    pos: "PG",  tradeValue: 76.4, stats: { PPG: 24.3, RPG: 4.4, APG: 7.3, FG: "44.1%", "3PM": 4.1 }, weeklyPts: [42,48,38,55,44,50,58,40,48,44] },
-  { name: "Kevin Durant",      pos: "SF",  tradeValue: 86.6, stats: { PPG: 28.0, RPG: 6.7, APG: 5.0, FG: "53.0%", "3PM": 2.2 }, weeklyPts: [55,60,50,65,52,62,58,55,60,55] },
-  { name: "Shai Gilgeous-Alexander", pos: "PG", tradeValue: 89.4, stats: { PPG: 30.1, RPG: 5.5, APG: 6.2, FG: "53.5%", "3PM": 1.8 }, weeklyPts: [58,65,55,70,60,68,62,58,65,62] },
-];
+(function () {
+  const details = {{ result.player_details | tojson if result.player_details else '[]' }};
+  if (!details.length) return;
 
-const STAT_KEYS = ["PPG", "RPG", "APG", "FG", "3PM"];
+  const labels = details.map(p => p.name);
+  const values = details.map(p => p.trade_value || 0);
+  const colors = details.map(p => p.side === 'give' ? 'rgba(122, 162, 255, 0.75)' : 'rgba(107, 207, 127, 0.75)');
+  const borders = details.map(p => p.side === 'give' ? '#7aa2ff' : '#6bcf7f');
 
-let givePlayer    = null;
-let receivePlayer = null;
-let chartInstance = null;
+  const ctx = document.getElementById('trade-chart');
+  if (!ctx) return;
 
-// ── Autocomplete ─────────────────────────────────────────────
-document.querySelectorAll('.player-input').forEach(function(input) {
-  const slotId = input.dataset.slot;
-  const dropdown = document.getElementById('ac-' + slotId);
-
-  input.addEventListener('input', function() {
-    const query = this.value.trim().toLowerCase();
-    dropdown.innerHTML = '';
-
-    if (!query) { dropdown.classList.remove('open'); return; }
-
-    const matches = PLAYERS.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5);
-    if (!matches.length) { dropdown.classList.remove('open'); return; }
-
-    matches.forEach(function(player) {
-      const item = document.createElement('div');
-      item.className = 'ac-item';
-      item.innerHTML = player.name + '<span class="ac-pos">' + player.pos + '</span>';
-      item.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        input.value = player.name;
-        dropdown.classList.remove('open');
-
-        // Store selection
-        if (slotId === 'give-0')    givePlayer    = player;
-        if (slotId === 'receive-0') receivePlayer = player;
-      });
-      dropdown.appendChild(item);
-    });
-
-    dropdown.classList.add('open');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Trade Value (Avg Pts)',
+        data: values,
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1.5,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e1e',
+          borderColor: '#3a3a3a',
+          borderWidth: 1,
+          titleColor: '#eaeaea',
+          bodyColor: '#aaa',
+          callbacks: {
+            label: ctx => ' ' + ctx.parsed.y.toFixed(1) + ' pts avg'
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#888', font: { size: 11, weight: '600' } },
+          grid: { color: '#1e1e1e' }
+        },
+        y: {
+          ticks: { color: '#666', font: { size: 10 } },
+          grid: { color: '#222' },
+          beginAtZero: true
+        }
+      }
+    }
   });
 
-  input.addEventListener('blur', function() {
-    setTimeout(() => dropdown.classList.remove('open'), 150);
-  });
-});
-
-// ── Show analysis ─────────────────────────────────────────────
-function showAnalysis() {
-  // Fall back to first two players if nothing selected (demo mode)
-  if (!givePlayer)    givePlayer    = PLAYERS[0];
-  if (!receivePlayer) receivePlayer = PLAYERS[1];
-
-  // Update labels
-  document.getElementById('label-give').textContent    = givePlayer.name;
-  document.getElementById('label-receive').textContent = receivePlayer.name;
-  document.getElementById('balance-give-name').textContent    = givePlayer.name;
-  document.getElementById('balance-receive-name').textContent = receivePlayer.name;
-  document.getElementById('th-give').textContent    = givePlayer.name;
-  document.getElementById('th-receive').textContent = receivePlayer.name;
-  document.getElementById('legend-give').textContent    = givePlayer.name;
-  document.getElementById('legend-receive').textContent = receivePlayer.name;
-
-  // Balance bar
-  const gv = givePlayer.tradeValue;
-  const rv = receivePlayer.tradeValue;
-  const total = gv + rv;
-  const givePct = (gv / total) * 100;
-
-  document.getElementById('score-give').textContent    = gv.toFixed(1);
-  document.getElementById('score-receive').textContent = rv.toFixed(1);
-
+  // Animate balance bar
   const bar = document.getElementById('balance-bar');
-  bar.style.width = givePct + '%';
-
-  // Color bar based on who wins
-  const diff = Math.abs(gv - rv);
-  if (diff < 3) {
-    bar.style.background = 'linear-gradient(90deg, #4a7adf, #5abf6f)';
-    document.getElementById('balance-verdict').textContent = 'Even Trade';
-  } else if (gv > rv) {
-    bar.style.background = 'linear-gradient(90deg, #4a7adf, #7aa2ff)';
-    document.getElementById('balance-verdict').textContent = gv - rv > 10 ? 'You\'re Giving Too Much' : 'Slight Disadvantage';
-  } else {
-    bar.style.background = 'linear-gradient(90deg, #4a7adf, #6bcf7f)';
-    document.getElementById('balance-verdict').textContent = rv - gv > 10 ? 'Great Value for You' : 'Slight Advantage';
+  if (bar) {
+    const w = bar.dataset.width;
+    requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = w + '%'; }));
   }
-
-  // Stat table
-  const tbody = document.getElementById('stat-tbody');
-  tbody.innerHTML = '';
-  STAT_KEYS.forEach(function(stat) {
-    const gStat = givePlayer.stats[stat];
-    const rStat = receivePlayer.stats[stat];
-
-    // Simple numeric comparison for winner highlight
-    const gNum = parseFloat(gStat);
-    const rNum = parseFloat(rStat);
-    const gWins = !isNaN(gNum) && !isNaN(rNum) && gNum > rNum;
-    const rWins = !isNaN(gNum) && !isNaN(rNum) && rNum > gNum;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + stat + '</td>' +
-      '<td class="' + (gWins ? 'stat-winner give-color' : 'stat-loser') + '">' + gStat + '</td>' +
-      '<td class="' + (rWins ? 'stat-winner receive-color' : 'stat-loser') + '">' + rStat + '</td>';
-    tbody.appendChild(tr);
-  });
-
-  // Show analysis view
-  document.getElementById('view-input').classList.add('hidden');
-  document.getElementById('view-analysis').classList.remove('hidden');
-
-  // Draw chart after view is visible
-  requestAnimationFrame(drawChart);
+})();
+</script>
+{% else %}
+<script>
+// Animate balance bar without chart
+const bar = document.getElementById('balance-bar');
+if (bar) {
+  const w = bar.dataset.width;
+  requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = w + '%'; }));
 }
+</script>
+{% endif %}
 
-// ── Back to input ─────────────────────────────────────────────
-function showInput() {
-  document.getElementById('view-analysis').classList.add('hidden');
-  document.getElementById('view-input').classList.remove('hidden');
-}
+<script>
+(function () {
+  // Trade hint: show player counts as user fills slots
+  const giveInputs    = document.querySelectorAll('[name^="give_player_"]');
+  const receiveInputs = document.querySelectorAll('[name^="receive_player_"]');
+  const hint          = document.getElementById('trade-hint');
 
-// ── Canvas line chart ─────────────────────────────────────────
-function drawChart() {
-  const canvas = document.getElementById('performance-chart');
-  const container = canvas.parentElement;
-  canvas.width  = container.clientWidth  - 48; // account for padding
-  canvas.height = container.clientHeight - 48;
-
-  const ctx    = canvas.getContext('2d');
-  const W      = canvas.width;
-  const H      = canvas.height;
-  const weeks  = givePlayer.weeklyPts.length;
-  const labels = givePlayer.weeklyPts.map((_, i) => 'Wk ' + (i + 1));
-
-  const allPts = [...givePlayer.weeklyPts, ...receivePlayer.weeklyPts];
-  const minPt  = Math.floor(Math.min(...allPts) / 10) * 10;
-  const maxPt  = Math.ceil(Math.max(...allPts)  / 10) * 10 + 10;
-
-  const padL = 40, padR = 20, padT = 16, padB = 32;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Grid lines
-  const gridLines = 5;
-  for (let i = 0; i <= gridLines; i++) {
-    const y = padT + (chartH / gridLines) * i;
-    const val = Math.round(maxPt - ((maxPt - minPt) / gridLines) * i);
-    ctx.beginPath();
-    ctx.strokeStyle = '#2a2a2a';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.moveTo(padL, y);
-    ctx.lineTo(padL + chartW, y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = '#444';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(val, padL - 6, y + 4);
+  function countFilled(inputs) {
+    return Array.from(inputs).filter(i => i.value.trim()).length;
   }
 
-  // X labels
-  ctx.fillStyle = '#444';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  for (let i = 0; i < weeks; i++) {
-    const x = padL + (chartW / (weeks - 1)) * i;
-    ctx.fillText(labels[i], x, H - padB + 18);
+  function updateHint() {
+    const g = countFilled(giveInputs);
+    const r = countFilled(receiveInputs);
+    if (!g && !r) { hint.textContent = ''; return; }
+    if (g === r) {
+      hint.textContent = `${g}v${r} trade — balanced`;
+      hint.style.color = '#6bcf7f';
+    } else if (g > 0 && r > 0) {
+      hint.textContent = `${g}v${r} trade — imbalance penalty applied to the larger side`;
+      hint.style.color = '#ffd93d';
+    } else {
+      hint.textContent = '';
+    }
   }
 
-  // Draw a player line with area fill
-  function drawLine(pts, color) {
-    const xStep = chartW / (weeks - 1);
-
-    // Area fill
-    ctx.beginPath();
-    pts.forEach(function(pt, i) {
-      const x = padL + xStep * i;
-      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-    ctx.lineTo(padL + xStep * (weeks - 1), padT + chartH);
-    ctx.lineTo(padL, padT + chartH);
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
-    grad.addColorStop(0,   color.replace(')', ', 0.18)').replace('rgb', 'rgba'));
-    grad.addColorStop(1,   color.replace(')', ', 0.01)').replace('rgb', 'rgba'));
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Line
-    ctx.beginPath();
-    pts.forEach(function(pt, i) {
-      const x = padL + xStep * i;
-      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 2.5;
-    ctx.lineJoin    = 'round';
-    ctx.stroke();
-
-    // Dots
-    pts.forEach(function(pt, i) {
-      const x = padL + xStep * i;
-      const y = padT + chartH - ((pt - minPt) / (maxPt - minPt)) * chartH;
-      ctx.beginPath();
-      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = '#121212';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    });
-  }
-
-  drawLine(givePlayer.weeklyPts,    'rgb(122, 162, 255)'); // blue
-  drawLine(receivePlayer.weeklyPts, 'rgb(107, 207, 127)'); // green
-}
+  [...giveInputs, ...receiveInputs].forEach(i => i.addEventListener('input', updateHint));
+  updateHint();
+})();
 </script>
 
 {% endblock %}
