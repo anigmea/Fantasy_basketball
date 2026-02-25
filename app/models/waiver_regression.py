@@ -128,7 +128,14 @@ def _positions_compatible(target_pos: str, candidate_pos: str) -> bool:
 
 
 
-def recommend_best_players(db, model, games_remaining=3, top_n=25, include_injured=False):
+def recommend_best_players(
+    db,
+    model,
+    target_position: str = None,
+    games_remaining: int = 3,
+    top_n: int = 25,
+    include_injured: bool = False,
+):
   '''Returns top players across team_players + free_agents, ranked by expected points for the rest of the week'''
 
   seen = set()
