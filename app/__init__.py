@@ -7,6 +7,18 @@ from firebase_admin import credentials, firestore
 app = Flask(__name__) # creates app VARIABLE as instance of class Flask (__name__ references the name of the module in which it is used (returns __main__?))
 app.config.from_object(Config) # access sensitive info using something like app.config['<variable_name>']
 
+# if not firebase_admin._apps:
+
+#     # If running on Cloud Run, use IAM-based credentials
+#     if os.environ.get("K_SERVICE"):
+#         cred = credentials.ApplicationDefault()
+
+#     # Otherwise (local dev), use JSON file path from config
+#     else:
+#         cred = credentials.Certificate(app.config["FIREBASE_CREDENTIALS"])
+
+#     firebase_admin.initialize_app(cred)
+
 # firebase setup
 cred = credentials.Certificate(app.config["FIREBASE_CREDENTIALS"])
 firebase_admin.initialize_app(cred)
