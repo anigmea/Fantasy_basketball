@@ -37,6 +37,10 @@ def get_boom_bust_players(db, include_injured=True, year=2026, min_games=10):
             season = p.get("stats", {}).get(f"{year}_total", {})
             total = season.get("total", {})
             gp = total.get("GP", 0)
+            proj = p.get("projected_avg_points")
+            
+            if proj < 10:
+                continue
 
             if gp < min_games:
                 continue
