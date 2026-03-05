@@ -27,9 +27,6 @@ steps:
 images:
 - us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1
 
-# Map secret names to Secret Manager versions
-# gcloud secrets create SECRET_KEY --data-file=- <<< (int value here)
-# gcloud secrets create firebase-credentials --data-file= (path to firebase json file here)
 secrets:
 - kmsKeyName: projects/$PROJECT_ID/locations/global/keyRings/DEFAULT/cryptoKeys/DEFAULT
   secretEnv:

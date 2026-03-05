@@ -11,3 +11,6 @@ class Config:
     ESPN_S2 = os.environ.get("ESPN_S2") or 'TBA'
     LEAGUE_ID = os.environ.get("LEAGUE_ID") or 'TBA'
 
+# Map secret names to Secret Manager versions
+# gcloud secrets create SECRET_KEY --data-file=- <<< (int value here)
+# gcloud secrets create firebase-credentials --data-file= (path to firebase json file here)
