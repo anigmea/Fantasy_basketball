@@ -1,5 +1,5 @@
 steps:
-# Build the container image
+# Build Docker image
 - name: 'gcr.io/cloud-builders/docker'
   args:
     [
@@ -13,25 +13,19 @@ steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args:
-  - run
-  - deploy
-  - fantasy-basketball-assistant
-  - --image
-  - us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1
-  - --region
-  - us-west2
-  - --platform
-  - managed
-  - --allow-unauthenticated
+    [
+      "run", "deploy", "fantasy-basketball-assistant",
+      "--image", "us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1",
+      "--region", "us-west2",
+      "--platform", "managed",
+      "--allow-unauthenticated",
+      "--update-secrets",
+      "FIREBASE_CREDENTIALS=firebase-credentials:latest",
+      "API_KEY=API_KEY_SECRET:latest"
+    ]
 
 images:
 - us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1
-
-secrets:
-- kmsKeyName: projects/$PROJECT_ID/locations/global/keyRings/DEFAULT/cryptoKeys/DEFAULT
-  secretEnv:
-    FIREBASE_CREDENTIALS: 'firebase-credentials'
-    API_KEY: 'API_KEY_SECRET'
 
 options:
   logging: CLOUD_LOGGING_ONLY
