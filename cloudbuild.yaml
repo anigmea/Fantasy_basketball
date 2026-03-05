@@ -15,7 +15,7 @@ steps:
   args:
   - run
   - deploy
-  - Fantasy-Basketball-Assistant
+  - fantasy-basketball-assistant
   - --image
   - us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1
   - --region
