@@ -5,7 +5,7 @@ steps:
       docker build \
         -f "quickstart-docker/Dockerfile" \
         -t us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1 \
-        "quick-start docker folder/."
+        "./quickstart docker"
     automapSubstitutions: true
 
   # Step 2: Push the image to Artifact Registry (implicitly done by the 'images' field below)
