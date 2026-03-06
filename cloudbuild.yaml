@@ -20,7 +20,8 @@ steps:
       "--region","us-west2",
       "--platform","managed",
       "--allow-unauthenticated",
-      "--update-secrets","API_KEY=API_KEY_SECRET:latest"
+      "--update-secrets","API_KEY=API_KEY_SECRET:latest",
+      --timeout=300
     ]
 
 images:
