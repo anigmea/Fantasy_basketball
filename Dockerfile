@@ -15,7 +15,7 @@ COPY . .
 EXPOSE 8080
 
 # Run the app with gunicorn
-CMD gunicorn --bind 0.0.0.0:$PORT fantasy:app
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
 
 # CMD ["python", "fantasy.py"]
 
