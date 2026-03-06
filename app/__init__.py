@@ -11,10 +11,12 @@ app.config.from_object(Config) # access sensitive info using something like app.
 # Initialize Firebase
 if not firebase_admin._apps:
     firebase_cred_path = os.getenv("FIREBASE_CREDENTIALS")
-    if firebase_cred_path:
+
+    if firebase_cred_path and os.path.exists(firebase_cred_path):
         cred = credentials.Certificate(firebase_cred_path)
     else:
         cred = credentials.ApplicationDefault()
+
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()

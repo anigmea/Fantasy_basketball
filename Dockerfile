@@ -15,6 +15,8 @@ COPY . .
 EXPOSE 8080
 
 # Run the app with gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "fantasy:app"]
+
+# CMD ["python", "fantasy.py"]
 
 # https://docs.cloud.google.com/build/docs/build-push-docker-image

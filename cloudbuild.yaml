@@ -15,13 +15,14 @@ steps:
   entrypoint: gcloud
   args:
     [
-      "run", "deploy", "fantasy-basketball-assistant",
-      "--image", "us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1",
-      "--region", "us-west2",
-      "--platform", "managed",
+      "run","deploy","fantasy-basketball-assistant",
+      "--image","us-west2-docker.pkg.dev/$PROJECT_ID/quickstart-docker-repo/quickstart-image:tag1",
+      "--region","us-west2",
+      "--platform","managed",
       "--allow-unauthenticated",
-      "--update-secrets", "FIREBASE_CREDENTIALS=firebase-credentials:latest",
-      "--update-secrets", "API_KEY=API_KEY_SECRET:latest"
+      "--update-secrets","/secrets/firebase.json=firebase-credentials:latest",
+      "--set-env-vars","FIREBASE_CREDENTIALS=/secrets/firebase.json",
+      "--update-secrets","API_KEY=API_KEY_SECRET:latest"
     ]
 
 images:
