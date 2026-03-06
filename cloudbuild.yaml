@@ -20,8 +20,6 @@ steps:
       "--region","us-west2",
       "--platform","managed",
       "--allow-unauthenticated",
-      "--update-secrets","/secrets/firebase.json=firebase-credentials:latest",
-      "--set-env-vars","FIREBASE_CREDENTIALS=/secrets/firebase.json",
       "--update-secrets","API_KEY=API_KEY_SECRET:latest"
     ]
 
